@@ -23,6 +23,14 @@ spec:
         runAsGroup: 2000
         fsGroup: 2000
       {{- end }}
+      initContainers:
+      - name: setup-mountpath
+        image: alpine:latest
+        command: ['sh', '-c', 'stat /data/db', 'chmod 777 /data/db']
+        volumeMounts:
+        - name: data
+          mountPath: /data/db
+          readOnly: false
       containers:
       - env:
         {{- include "data.envvars" (dict "envvar" .Values.mongo.envvars "top" $) | indent 8 }}
@@ -38,8 +46,8 @@ spec:
           name: mongo
           protocol: TCP
         volumeMounts:
-        - mountPath: /data/db
-          name: data
+        #- mountPath: /data/db
+        #  name: data
         - mountPath: /docker-entrypoint-initdb.d/
           name: mongo-init
         {{- if .Values.mongo.ssl.enabled }}
