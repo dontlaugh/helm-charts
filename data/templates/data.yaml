@@ -77,19 +77,6 @@ spec:
         {{- end }}
       - name: sidecar
         image: {{ tpl .Values.sidecar.image $ | quote }}
-        readinessProbe:
-          exec:
-            command:
-              - /bin/sh
-              - -c
-              {{- if .Values.global.spire.enabled }}
-              - "curl http://127.0.0.1:8181/list/1"
-              {{- else if .Values.global.mesh_tls.use_provided_certs }}
-              - "curl -k --cacert /etc/proxy/tls/sidecar/ca.crt --key /etc/proxy/tls/sidecar/server.key --cert /etc/proxy/tls/sidecar/server.crt https://localhost:8181/list/1/"
-              {{- end }}
-          initialDelaySeconds: 20
-          periodSeconds: 5
-
         env:
            {{- include "greymatter.envvars" . | indent 8 }}
 
@@ -135,7 +122,11 @@ spec:
             command:
               - /bin/sh
               - -c
+              {{- if .Values.global.spire.enabled }}
+              - "curl http://127.0.0.1:8181/list/1"
+              {{- else if .Values.global.mesh_tls.use_provided_certs }}
               - "curl -k --cacert /etc/proxy/tls/sidecar/ca.crt --key /etc/proxy/tls/sidecar/server.key --cert /etc/proxy/tls/sidecar/server.crt https://localhost:8181/list/1/"
+              {{- end }}
           initialDelaySeconds: 20
           periodSeconds: 5
 
