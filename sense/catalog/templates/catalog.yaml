@@ -6,16 +6,16 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: catalog
+      gm.proxy: catalog
       deployment: catalog
   replicas: 1
   template:
     metadata:
       labels:
-        app: catalog
+        gm.proxy: catalog
         deployment: catalog
     spec:
-      serviceAccountName: {{ .Values.global.waiter.serviceAccount.name }}
+      serviceAccountName: {{ .Values.global.waiter.service_account.name }}
       initContainers:
         - name: ensure-gm-control
           image: {{ .Values.global.waiter.image }}
@@ -27,54 +27,50 @@ spec:
             - name: POST_DELAY
               value: "10"
       containers:
-        - name: catalog
-          image: {{ tpl .Values.catalog.image $ }}
-          imagePullPolicy: {{ .Values.catalog.imagePullPolicy }}
-          {{- if .Values.catalog.resources }}
-          resources:
+      - name: catalog
+        image: {{ tpl .Values.catalog.image $ }}
+        imagePullPolicy: {{ .Values.catalog.image_pull_policy }}
+        {{- if .Values.catalog.resources }}
+        resources:
 {{ toYaml .Values.catalog.resources | indent 12 }}
-          {{- end }}
-          env:
-          {{- include "envvars" (dict "envvar" .Values.catalog.envvars "top" $) | indent 10 }}
-          {{- if .Values.catalog.secret }}
-          volumeMounts:
-            - name: certs
-              mountPath: {{ .Values.catalog.secret.mountPoint }}
-          {{- end }}
-        - name: sidecar
-          image: {{ tpl $.Values.sidecar.image $ }}
-          imagePullPolicy: {{ .Values.sidecar.imagePullPolicy }}
-          {{- if .Values.sidecar.resources }}
-          resources:
-{{ toYaml .Values.sidecar.resources | indent 12 }}
-          {{- end }}
-          ports:
-            - name: proxy
-              containerPort: 8080
-            - name: metrics
-              containerPort: 8081
-          env:
-          {{- include "greymatter.envvars" $ | indent 10 }}
-          {{- if .Values.global.spire.enabled }}
-          volumeMounts:
-          {{- include "sidecar_volume_mounts" . | indent 10 }}
-          {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
-          volumeMounts:
-          {{- include "sidecar_volume_certs_mount" . | indent 10 }}
-          {{- end }}
-          readinessProbe:
-            exec:
-              command:
-                - /bin/sh
-                - -c
-                - "curl -k --cacert /etc/proxy/tls/sidecar/ca.crt --key /etc/proxy/tls/sidecar/server.key --cert /etc/proxy/tls/sidecar/server.crt https://localhost:9080/summary"
-            initialDelaySeconds: 20
-            periodSeconds: 5
-        {{- if .Values.global.consul.enabled }}
-        {{- $data := dict "Values" .Values "ServiceName" "catalog" }}
-        {{- include "consul.agent" $data | nindent 8 }}
         {{- end }}
-
+        env:
+        {{- include "envvars" (dict "envvar" .Values.catalog.envvars "top" $) | indent 10 }}
+        {{- if .Values.catalog.secret }}
+        volumeMounts:
+          - name: certs
+            mountPath: {{ .Values.catalog.secret.mount_point }}
+        {{- end }}
+      - name: sidecar
+        image: {{ tpl $.Values.sidecar.image $ }}
+        imagePullPolicy: {{ .Values.sidecar.image_pull_policy }}
+        {{- if .Values.sidecar.resources }}
+        resources:
+{{ toYaml .Values.sidecar.resources | indent 12 }}
+        {{- end }}
+        ports:
+          - name: proxy
+            containerPort: {{ .Values.sidecar.port }}
+          - name: metrics
+            containerPort: {{ .Values.sidecar.metrics_port }}
+        env:
+        {{- include "sidecar.envvars" $ | indent 10 }}
+        {{- if .Values.catalog.secret }}
+        volumeMounts:
+        {{- include "sidecar_volume_certs_mount" . | indent 10 }}
+        {{- end }}
+        readinessProbe:
+          exec:
+            command:
+              - /bin/sh
+              - -c
+              - "curl -k --cacert {{ .Values.sidecar.secret.mount_point }}/{{ .Values.sidecar.secret.secret_keys.ca }} --key  {{ .Values.sidecar.secret.mount_point }}/{{ .Values.sidecar.secret.secret_keys.key }} --cert  {{ .Values.catalog.secret.mount_point }}/{{ .Values.sidecar.secret.secret_keys.cert }} https://localhost:9080/summary"
+          initialDelaySeconds: 20
+          periodSeconds: 5
+      {{- if .Values.global.consul.enabled }}
+      {{- $data := dict "Values" .Values "ServiceName" "catalog" }}
+      {{- include "consul.agent" $data | nindent 8 }}
+      {{- end }}
       volumes:
       {{- if .Values.global.consul.enabled }}
       - name: data-consul
@@ -82,15 +78,11 @@ spec:
       - name: config-consul
         emptyDir: {}
       {{- end }}
-      {{- if .Values.global.spire.enabled }}
-      {{- include "sidecar_volumes" . | indent 6 }}
-      {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
-      {{- include "sidecar_certs_volumes" . | indent 6 }}
-      {{- end }} 
       {{- if .Values.catalog.secret }}
+      {{- include "sidecar_certs_volumes" . | indent 6 }}
       - name: certs
         secret:
           secretName: {{ .Values.catalog.secret.secret_name }}
       {{- end }}
       imagePullSecrets:
-      - name: {{ .Values.global.imagePullSecret }}
+      - name: {{ .Values.global.image_pull_secret }}

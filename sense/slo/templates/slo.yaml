@@ -6,13 +6,13 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: slo
+      gm.proxy: slo
       deployment: slo
   replicas: 1
   template:
     metadata:
       labels:
-        app: slo
+        gm.proxy: slo
         deployment: slo
     spec:
       {{- if and .Values.global.environment (ne .Values.global.environment "openshift") }}
@@ -21,7 +21,7 @@ spec:
         runAsGroup: 0
         fsGroup: 2000
       {{- end }}
-      serviceAccountName: {{ .Values.global.waiter.serviceAccount.name }}
+      serviceAccountName: {{ .Values.global.waiter.service_account.name }}
       {{- if not .Values.postgres.rds.enabled }}
       initContainers:
         - name: ensure-postgres
@@ -36,80 +36,34 @@ spec:
       {{- end }}
       containers:
       - name: slo
-        image: {{ .Values.slo.image | quote }}
-        imagePullPolicy: {{ .Values.slo.imagePullPolicy }}
+        image: {{ tpl .Values.slo.image . }}
+        imagePullPolicy: {{ .Values.slo.image_pull_policy }}
         {{- if .Values.slo.resources }}
         resources:
 {{ toYaml .Values.slo.resources | indent 10 }}
         {{- end }}
         volumeMounts:
-          {{- if .Values.postgres.secret }}
+          {{- if .Values.postgres.secret.enabled }}
         - name: postgres-certs
-          mountPath: {{ .Values.postgres.secret.mountPoint }}
+          mountPath: {{ .Values.postgres.secret.mount_point }}
           {{- end}}
-          {{- if .Values.slo.secret }}
+          {{- if .Values.slo.secret.enabled }}
         - name: service-certs
-          mountPath: {{ .Values.slo.secret.mountPoint }}
+          mountPath: {{ .Values.slo.secret.mount_point }}
           {{- end }}
         env:        
-        - name: POSTGRESQL_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.postgres.credentials.secret_name }}
-              key: username
-        - name: POSTGRESQL_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.postgres.credentials.secret_name }}
-              key: password
-        - name: POSTGRESQL_DATABASE
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.postgres.credentials.secret_name }}
-              key: database
-        {{- if .Values.postgres.rds.enabled }}
-        - name: POSTGRESQL_ENDPOINT
-          value: {{ .Values.postgres.rds.endpoint }}
-        {{- end }}
-        - name: DATABASE_URI
+        {{- include "envvars" (dict "envvar" .Values.slo.envvars "top" $) | indent 10 }}
+        # Because of the order of envvars is not guaranteed when templating, we are hardcoding database_uri as the last envvar
+        # https://github.com/kubernetes/kubernetes/issues/40373
+          - name: DATABASE_URI
           {{- if .Values.postgres.rds.enabled }}
-          value: postgres://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@$(POSTGRESQL_ENDPOINT):5432/$(POSTGRESQL_DATABASE)
-          {{- else}}
-          value: postgres://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@postgres-slo.{{ .Release.Namespace }}.svc:5432/$(POSTGRESQL_DATABASE)
+            value: postgres://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@$(POSTGRESQL_ENDPOINT):5432/$(POSTGRESQL_DATABASE)
+          {{- else }}
+            value: postgres://$(POSTGRESQL_USERNAME):$(POSTGRESQL_PASSWORD)@postgres-slo.{{ .Release.Namespace }}.svc:5432/$(POSTGRESQL_DATABASE)
           {{- end }}
-        - name: SERVICE_PORT
-          value: "1337"
-        {{- if .Values.postgres.secret }}
-        - name: SSL_ENABLED
-          value: "true"
-        - name: SSL_SERVER_CA
-          value: {{ .Values.postgres.secret.mountPoint}}/{{ .Values.postgres.secret.secretKeys.ca }}
-        {{- if not .Values.postgres.rds.enabled }}
-        - name: SSL_SERVER_CERT
-          value: {{ .Values.postgres.secret.mountPoint}}/{{ .Values.postgres.secret.secretKeys.cert }}
-        - name: SSL_SERVER_KEY
-          value: {{ .Values.postgres.secret.mountPoint}}/{{ .Values.postgres.secret.secretKeys.key }}
-        {{- end }}
-        {{- end }}
-        {{- if and .Values.slo.secret }}
-        - name: SERVICE_SSL_ENABLED
-          value: "true"
-        - name: SERVICE_SSL_CA
-          value: {{ .Values.slo.secret.mountPoint}}/{{ .Values.slo.secret.secretKeys.ca }}
-        - name: SERVICE_SSL_CERT
-          value: {{ .Values.slo.secret.mountPoint}}/{{ .Values.slo.secret.secretKeys.cert }}
-        - name: SERVICE_SSL_KEY
-          value: {{ .Values.slo.secret.mountPoint}}/{{ .Values.slo.secret.secretKeys.key }}
-        {{- end }}
-        {{- if .Values.postgres.rds.enabled }}
-        - name: DROP_SCHEMA
-          value: "false"
-        - name: SSL_1_WAY_SSL
-          value: "true"
-        {{- end }}
       - name: sidecar
         image: {{ tpl .Values.sidecar.image $ | quote }}
-        imagePullPolicy: {{ .Values.sidecar.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.sidecar.image_pull_policy }}
         {{- if .Values.sidecar.resources }}
         resources:
 {{ toYaml .Values.sidecar.resources | indent 10 }}
@@ -120,11 +74,8 @@ spec:
         - name: metrics
           containerPort: 8081
         env:
-        {{- include "greymatter.envvars" . | indent 8 }}
-        {{- if .Values.global.spire.enabled }}
-        volumeMounts:
-        {{- include "sidecar_volume_mounts" . | indent 8 }}
-        {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
+        {{- include "sidecar.envvars" . | indent 8 }}
+        {{- if .Values.sidecar.secret.enabled }}
         volumeMounts:
         {{- include "sidecar_volume_certs_mount" . | indent 8 }}
         {{- end }}
@@ -133,21 +84,18 @@ spec:
       {{- include "consul.agent" $data | nindent 6 }}
       {{- end }}
       imagePullSecrets:
-        - name: {{ .Values.global.imagePullSecret }}
+        - name: {{ .Values.global.image_pull_secret }}
       volumes:
-      {{- if .Values.global.spire.enabled }}
-      {{- include "sidecar_volumes" . | indent 6 }}
-      {{- include "sidecar_certs_volumes" . | indent 6 }}
-      {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
+      {{- if .Values.sidecar.secret.enabled }}
       {{- include "sidecar_certs_volumes" . | indent 6 }}
       {{- end }}
-      {{- if .Values.postgres.secret}}
+      {{- if .Values.postgres.secret.enabled }}
       - name: postgres-certs
         secret:
           secretName: {{ .Values.postgres.secret.secret_name }}
           defaultMode: 0600
       {{- end }}
-      {{- if .Values.slo.secret}}
+      {{- if .Values.slo.secret.enabled }}
       - name: service-certs
         secret:
           secretName: {{ .Values.slo.secret.secret_name }}

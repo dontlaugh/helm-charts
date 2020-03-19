@@ -6,17 +6,17 @@ metadata:
 spec:
   selector:
     matchLabels:
-      app: dashboard
+      gm.proxy: dashboard
   replicas: 1
   template:
     metadata:
       labels:
-        app: dashboard
+        gm.proxy: dashboard
     spec:
       containers:
       - name: dashboard
         image: '{{ tpl .Values.dashboard.image $ }}'
-        imagePullPolicy: {{ .Values.dashboard.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.dashboard.image_pull_policy }}
         {{- if .Values.dashboard.resources }}
         resources:
 {{ toYaml .Values.dashboard.resources | indent 10 }}
@@ -36,53 +36,31 @@ spec:
           initialDelaySeconds: 20
           periodSeconds: 5
         env:
-        - name: FABRIC_SERVER
-          value: '{{ tpl .Values.dashboard.fabric_server . }}'
-        - name: CONFIG_SERVER
-          value: '{{ tpl .Values.dashboard.config_server . }}'
-        - name: USE_PROMETHEUS
-          value: '{{ .Values.dashboard.use_prometheus }}'
-        - name: OBJECTIVES_SERVER
-          value: '{{ tpl .Values.dashboard.objectives_server . }}'
-        - name: PROMETHEUS_SERVER
-          value: '{{ .Values.dashboard.prometheus_server }}'
-        - name: BASE_URL
-          value: '{{ tpl .Values.dashboard.base_url . }}'
-        - name: REQUEST_TIMEOUT
-          value: '{{ .Values.dashboard.requestTimeout }}'
+        {{- include "envvars" (dict "envvar" .Values.dashboard.envvars "top" $) | indent 10 }}
         {{- if .Values.dashboard.secret }}
-        - name: SERVER_SSL_ENABLED
-          value: "true"
-        - name: SERVER_SSL_CA
-          value: {{ .Values.dashboard.secret.mountPoint}}/{{ .Values.dashboard.secret.secretKeys.ca }}
-        - name: SERVER_SSL_CERT
-          value: {{ .Values.dashboard.secret.mountPoint}}/{{ .Values.dashboard.secret.secretKeys.cert }}
-        - name: SERVER_SSL_KEY
-          value: {{ .Values.dashboard.secret.mountPoint}}/{{ .Values.dashboard.secret.secretKeys.key }}
         volumeMounts:
         - name: service-certs
-          mountPath: {{ .Values.dashboard.secret.mountPoint }}
+          mountPath: {{ .Values.dashboard.secret.mount_point }}
         {{- end }}
       - name: sidecar
-        image: '{{ tpl .Values.sidecar.image $ }}'
-        imagePullPolicy: {{ .Values.sidecar.imagePullPolicy }}
+        image: '{{ tpl .Values.sidecar_dashboard.image $ }}'
+        imagePullPolicy: {{ .Values.sidecar_dashboard.image_pull_policy }}
         {{- if .Values.dashboard.resources }}
         resources:
-{{ toYaml .Values.sidecar.resources | indent 10 }}
+{{ toYaml .Values.sidecar_dashboard.resources | indent 10 }}
         {{- end }}
         ports:
         - name: proxy
-          containerPort: 8080
+          containerPort: {{ .Values.sidecar_dashboard.port }}
         - name: metrics
-          containerPort: 8081
+          containerPort: {{ .Values.sidecar_dashboard.metrics_port }}
         env:
-        {{- include "greymatter.envvars" . | indent 8 }}
-        {{- if .Values.global.spire.enabled }}
+        {{- include "sidecar.envvars-dashboard" . | indent 8 }}
+        {{- if .Values.sidecar_dashboard.secret }}
         volumeMounts:
-        {{- include "sidecar_volume_mounts" . | indent 8 }}
-        {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
-        volumeMounts:
-        {{- include "sidecar_volume_certs_mount" . | indent 8 }}
+        - name: sidecar-certs
+          mountPath: {{ .Values.sidecar_dashboard.secret.mount_point }}
+          readOnly: true
         {{- end }}
       {{- if .Values.global.consul.enabled }}
       {{- $data := dict "Values" .Values "ServiceName" "dashboard" }}
@@ -95,10 +73,10 @@ spec:
       - name: config-consul
         emptyDir: {}
       {{- end }}
-      {{- if .Values.global.spire.enabled }}
-      {{- include "sidecar_volumes" . | indent 6 }}
-      {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
-      {{- include "sidecar_certs_volumes" . | indent 6 }}
+      {{- if .Values.sidecar_dashboard.secret }}
+      - name: sidecar-certs
+        secret:
+          secretName: {{ .Values.sidecar_dashboard.secret.secret_name }}
       {{- end }}
       {{- if .Values.dashboard.secret }}
       - name: service-certs
@@ -107,4 +85,4 @@ spec:
           defaultMode: 0600
       {{- end }}
       imagePullSecrets:
-      - name: {{ .Values.global.imagePullSecret }}
+      - name: {{ .Values.global.image_pull_secret }}
