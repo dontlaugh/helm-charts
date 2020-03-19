@@ -1,12 +1,15 @@
 {
-  "domain_key": "domain-{{.service.serviceName}}",
+  "cluster_key": "cluster-{{.service.serviceName}}",
   "zone_key": "{{.Values.global.zone}}",
-  "name": "*",
-  "port": 8080,
-  "redirects": null,
-  "gzip_enabled": false,
-  "cors_config": null,
-  "aliases": null{{- if .Values.global.mesh_tls.use_provided_certs }},
+  "name": "service",
+  "instances": [
+    {
+        "host": "0.0.0.0",
+        "port": {{ .service.port | default 8080 }}
+    }
+  ],
+  {{- if .service.secret.egressTLS }}
+  "require_tls": true,
   "ssl_config": {
       "protocols": [
         "SSLv3",
@@ -24,6 +27,8 @@
       }
     ]
   },
-  "force_https": true
   {{- end }}
+  "circuit_breakers": null,
+  "outlier_detection": null,
+  "health_checks": []
 }

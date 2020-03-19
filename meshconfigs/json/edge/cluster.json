@@ -5,9 +5,8 @@
   "instances": [],
   "circuit_breakers": null,
   "outlier_detection": null,
-  "health_checks": []{{- if .Values.global.mesh_tls.enabled }},
+  "health_checks": []{{- if .service.secret }},
   "require_tls": true,
-  {{- if .Values.global.mesh_tls.use_provided_certs }}
   "ssl_config": {
     "protocols": [
       "SSLv3",
@@ -25,16 +24,5 @@
       }
     ]
   }
-  {{- end }}
-  {{- if .Values.global.spire.enabled }}
-  "secret": {
-    "secret_key": "secret-edge-secret",
-    "secret_name": "spiffe://{{ .Values.global.spire.trustDomain }}/edge/mTLS",
-    "secret_validation_name": "spiffe://{{ .Values.global.spire.trustDomain }}",
-    "ecdh_curves": [
-        "X25519:P-256:P-521:P-384"
-    ]
-  }
-  {{- end}}
   {{- end }}
 }

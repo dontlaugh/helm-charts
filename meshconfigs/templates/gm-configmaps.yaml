@@ -1,17 +1,9 @@
 {{- $top := . }}
-{{- $svidList := list }}
-{{- range $name, $service := .Values.global.services }}
-    {{- $svidList = append $svidList (print "spiffe://" $top.Values.global.spire.trustDomain "/" $service.serviceName "/mTLS") }}
-{{- end }}
-{{- $svidList = append $svidList (print "spiffe://" $top.Values.global.spire.trustDomain "/edge/mTLS") }}
-{{- $svidList = append $svidList (print "spiffe://" $top.Values.global.spire.trustDomain "/spire-client/mTLS") }}
 {{- /* We loop over all the services to create the individual service objects */}}
-{{- range $name, $service := .Values.global.services }}
+{{- range $name, $service := .Values.services }}
 {{- if $service.controlEnabled }}
 ---
-{{/* {{- $lSecret := (default $service.removeListenerSecret false) }} */}}
-{{- $serviceExtras := (dict "top" $top "authorizedSvids" $svidList "mTLS" $top.Values.global.spire.enabled "svidList" (toJson $svidList)) }}
-{{- $svc := merge $service $serviceExtras }}
+{{- $svc := $service }}
 {{- $scope := set $top "service" $svc }}
 apiVersion: v1
 kind: ConfigMap
@@ -27,11 +19,10 @@ data:
 {{- end}}
 {{- end }}
 {{- /* Then we loop over the services again in order to create the edge objects */}}
-{{- range $name, $service := .Values.global.services }}
+{{- range $name, $service := .Values.services }}
 {{- if $service.controlEnabled }}
 ---
 {{- $scope := set $top "service" $service }}
-{{- $scope = set $scope "mTLS" $top.Values.global.spire.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -60,19 +51,8 @@ data:
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: domain-config
-  namespace: {{ .Release.Namespace }}
-data:
-  domain1.json: |-
-{{ .Files.Get "config/domain.json" | indent 4 }}
-  domain2.json: |-
-{{ .Files.Get "config/domain2.json" | indent 4 }}
----
-kind: ConfigMap
-apiVersion: v1
-metadata:
   name: bootstrap-script
   namespace: {{ .Release.Namespace }}
 data:
-  bootstrap.sh: |-
-{{ .Files.Get "config/bootstrap.sh" | indent 4 }}
+  gm-bootstrap.sh: |-
+{{ .Files.Get "config/gm-bootstrap.sh" | indent 4 }}
