@@ -1,118 +1,62 @@
-# Grey Matter Data settings
+# Grey Matter Data Defaults
 
 global:
-
-  imagePullSecret: docker.secret
-  
+  # Used as imagePullSecrets value for each subchart
+  image_pull_secret: docker.secret
+  # Deployment environment, one of "eks", "kuberenetes", or "openshift"
   environment: kubernetes
-  zone: zone-default-zone
-  domain:
-  route_url_name:
-  remove_namespace_from_url: ''
   exhibitor:
     replicas: 1
+  # Port for Grey Matter Control. Used in sidecar envvars
+  control_port: 50000
+  # Zone for Grey Matter objects. Used in sidecar envvars
+  zone: zone-default-zone
+  # Whether or not to use spire
+  spire:
+    enabled: false
+  # Whether to register services with Consul and where to find the Consul server
   consul:
     enabled: false
     host: ''
     port: 8500
-  control:
-    port: 50000
-  mesh_tls:
-    use_provided_certs: true
 
-  spire:
-    enabled: false
-
-  data:
-    # This value is used to data where to find jwt and also used to configure the mesh to enable routes from data to jwt
-    jwt_prefix: /jwt
-    sidecar:
-      version: latest
-
+  # Configures the init container used to wait on various deployments to be ready
   waiter:
     image: deciphernow/k8s-waiter:latest
-    serviceAccount:
+    service_account:
       create: true
       name: waiter-sa
   sidecar:
-    version: latest
-    envvars:
-      # You can customize the sidecar environment variables mesh-wide to enable features in the mesh
-      # All the sidecar envvars are documented in `./greymatter/README.md`, and the custom service-level defaults are documented in the services `configuration.md` files.
-      # These are sorted by how different the values are for the sidecars running on different services. The options are "all the same", "all except XDS". and "different"
-      # TODO: update each service to use default global values and only set the ones that are different.
-      # All the same
-      proxy_dynamic:
-        type: 'value'
-        value: 'true'
-      xds_zone:
-        type: 'value'
-        value: '{{ .Values.global.zone }}'
-      xds_cluster:
-        type: 'value'
-        value: ''
-      xds_host:
-        type: 'value'
-        value: 'control.{{ .Release.Namespace }}.svc'
-      xds_port:
-        type: 'value'
-        value: '{{ .Values.global.control.port }}'
-      xds_node_id:
-        type: 'value'
-        value: 'default'
-      envoy_admin_log_path:
-        type: 'value'
-        value: '/dev/stdout'
-
-# if this is false then you will need to change values.data.imagePullSecret to refrence a secret already in your namespace.
-createDockerSecret: true
+    version: 1.2.0
 
 data:
-  # The name of this installation of GM Data.  Used in the zookeeper address.  Allow to be unique to support multiple installations of Data
+  # Name used for the deployment and service resources
   name: data
-  version: 1.0.0
+  version: latest
   replicas: 1
+  # If set, enables tls using the secret specified in secret_name
   secret:
     secret_name: data-secrets
-  client_jwt_endpoint_address: localhost
-  client_jwt_endpoint_use_tls: 'true'
-  base_path: /services/{{ $.Values.data.name | lower }}/{{ $.Values.data.version | trunc 3 }}
-  image: docker.production.deciphernow.com/deciphernow/gm-data:{{ $.Values.data.version }}
-  imagePullSecret: docker.secret
-  certs_mount_point: /certs
-  imagePullPolicy: IfNotPresent
-  use_tls: true
+  image: docker-dev.production.deciphernow.com/deciphernow/gm-data:{{ $.Values.data.version }}
+  image_pull_secret: '{{ .Values.global.image_pull_secret }}'
+  image_pull_policy: IfNotPresent
   master_key: ac8923[lkn43589vi23kl4rfgv0ws
+  # Location and (optionally) size of pvc to persist data if not using s3 
   pvc:
+    mount_point: /app/buckets/{{ $.Values.data.aws.bucket}}/{{ $.Values.data.envvars.aws_s3_partition.value }}
     #size:
-    mountPath: /app/buckets/{{ $.Values.data.aws.bucket}}/{{ $.Values.data.envvars.aws_s3_partition.value }}
-  # Allows operators to change the user and group to match the process running inside the gm-data container.
-  securityContext:
+  # Security context for the statefulset if enabled
+  security_context:
     enabled: false
-    runAsUser: 666
-    runAsGroup: 666
-    fsGroup: 666
+    run_as_user: 666
+    run_as_group: 666
+    fs_group: 666
 
   # If Grey Matter Data is being deployed as a standalone instance, these values need to be provided
   deploy:
     standalone: false
-    # deploy waiterSA automatically (true if tiller service account has ability to make roles in cluster)
-    waiterSA: false
-    exhibitor_address:
-    base_path: /services/{{ .Release.Namespace | lower }}-{{ $.Values.data.name | lower }}/{{ $.Values.data.version }}
-    secrets:
-      - name: jwt-security
-        jwt.key:
-        jwt.pub:
-        jwt.api_key:
-      - name: jwt-certs
-        jwt.cert.pem:
-        jwt.key.pem:
-        jwt.trust.pem:
-        server.cert.pem:
-        server.key.pem:
-        server.trust.pem:
-
+    # deploy waiter_sa automatically (true if tiller service account has ability to make roles in cluster)
+    waiter_sa: false
 
   resources:
     limits:
@@ -165,14 +109,6 @@ data:
       type: secret
       secret: '{{ .Values.data.secret.secret_name }}'
       key: master_key
-      #mongo_initdb_root_username:
-      #type: secret
-      #secret: '{{ $.Values.mongo.credentials.secret_name }}'
-      #key: gmdata_username
-      #mongo_initdb_root_password:
-      #type: secret
-      #secret: '{{ $.Values.mongo.credentials.secret_name }}'
-      #key: gmdata_password
     mongodb:
       type: secret
       secret: '{{ $.Values.mongo.credentials.secret_name }}'
@@ -197,16 +133,16 @@ data:
       value: /services/{{ $.Values.data.name | lower }}/{{ $.Values.data.version }}
     client_jwt_prefix:
       type: value
-      value: '{{ .Values.global.data.jwt_prefix }}'
+      value: '/jwt'
     client_jwt_endpoint_address:
       type: value
       value: localhost
     client_jwt_endpoint_port:
       type: value
-      value: '8080'
+      value: '10808'
     client_jwt_endpoint_prefix:
       type: value
-      value: '{{ .Values.global.data.jwt_prefix }}'
+      value: '/jwt'
     client_jwt_endpoint_use_tls:
       type: value
       value: 'true'
@@ -222,6 +158,9 @@ data:
       type: secret
       secret: jwt-certs
       key: jwt.trust.pem
+    mongohost:
+      type: value
+      value: '{{ template "greymatter.mongo.address" . }}'
 
   aws:
     access_key: xxx
@@ -230,23 +169,24 @@ data:
     bucket: decipher-quickstart-helm
 
 mongo:
+  # Name used for the mongo deployment and service resources
   name: data-mongo
   replicas: 1
   image: 'deciphernow/mongo:4.0.3'
-  imagePullPolicy: IfNotPresent
-  #private_image: false
+  image_pull_policy: IfNotPresent
+  # If defined, sets the size and storageClass name for the Mongo data persistent volume storage class
   storage:
-    #This mountPath should match where your mongo's image will place its data
-    mountPath: /data/db
-    # The size, in Gi, that the Mongo PVC should be
+    # Where your mongo image will place its data
+    mount_path: /data/db
+    # Size, in Gi, that the Mongo PVC should be
     size: 40
     ## Mongo data Persistent Volume Storage Class
-    ## If defined, StorageClassName: <storageClass>
+    ## If defined, StorageClassName: <storage_class>
     ## If set to "-", StorageClassName: "", which disables dynamic provisioning
     ## If undefined (the default) or set to null, no storageClassName spec is
     ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
     ##   GKE, AWS & OpenStack)
-    #storageClass: "-"
+    #storage_class: "-"
   resources:
     limits:
       cpu: 200m
@@ -279,7 +219,24 @@ mongo:
     mongo_cn:
       type: value
       value: 'localhost'
-  
+    # If true, .Values.mongo.secret must be specified (see below), and mongo_key, mongo_trust, and mongo_cert must be specified as below
+    mongo_use_tls:
+      type: value
+      value: 'false'
+    #mongo_cert:
+    #  type: secret
+    #  secret: {{ .Values.mongo.secret.secret_name }}
+    #  key: {{ .Values.mongo.secret.secret_keys.cert }}
+    #mongo_key:
+    #  type: secret
+    #  secret: {{ .Values.mongo.secret.secret_name }}
+    #  key: {{ .Values.mongo.secret.secret_keys.key }}
+    #mongo_trust:
+    #  type: secret
+    #  secret: {{ .Values.mongo.secret.secret_name }}
+    #  key: {{ .Values.mongo.secret.secret_keys.ca }}
+ 
+  # The credentials for setting up a mongo user and database for data to connect with
   credentials:
     secret_name: 'mongo-password'
     root_username: 'mongo'
@@ -289,26 +246,31 @@ mongo:
     gmdata_username: 'gmdata-user'
     gmdata_password: 'mongopassword'
 
-  # set secret to enable MONGO_TLS
-    #secret:
+  # If set, enables tls and configures environment using the secret specified in secret_name
+  #secret:
     #secret_name: mongo-certs
-    #mountPoint: /secret/cert
-    #secretKeys:
+    #mount_point: /secret/cert
+    #secret_keys:
     #  ca: ca_b64
     #  cert: cert_b64
     #  key: key_b64
 
 sidecar:
-  version: '{{- $.Values.global.data.sidecar.version | default $.Values.global.sidecar.version }}'
-  image: 'docker-dev.production.deciphernow.com/deciphernow/gm-proxy:{{ tpl $.Values.sidecar.version $ }}'
-  imagePullPolicy: IfNotPresent
+  version: '{{ .Values.global.sidecar.version | default "latest" }}'
+  # Port where the proxy will listen
+  port: 10808
+  # Port where the proxy will expose metrics
+  metrics_port: 8081
+  # If set, enables tls using the secret specified in secret_name
   secret:
     secret_name: sidecar-certs
-    mountPoint: /etc/proxy/tls/sidecar/
-    secretKeys:
+    mount_point: /etc/proxy/tls/sidecar/
+    secret_keys:
       ca: ca.crt
-      cert: service.crt
-      key: service.key
+      key: server.key
+      cert: server.crt
+  image: 'docker-dev.production.deciphernow.com/deciphernow/gm-proxy:{{ tpl $.Values.sidecar.version $ }}'
+  image_pull_policy: IfNotPresent
   resources:
     limits:
       cpu: 200m
@@ -316,8 +278,3 @@ sidecar:
     requests:
       cpu: 100m
       memory: 128Mi
-  envvars:
-    xds_cluster:
-      type: value
-      value: '{{ $.Values.data.name }}'
-

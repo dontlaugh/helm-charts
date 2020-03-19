@@ -10,23 +10,23 @@ spec:
     type: RollingUpdate
   selector:
     matchLabels:
-      app: {{ .Values.data.name }}
+      gm.proxy: {{ .Values.data.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.data.name }}
+        gm.proxy: {{ .Values.data.name }}
     spec:
       {{- if and .Values.global.environment (ne .Values.global.environment "openshift") }}
-      {{- if .Values.data.securityContext.enabled }}
+      {{- if .Values.data.security_context.enabled }}
       securityContext:
-        fsGroup: {{ .Values.data.securityContext.fsGroup }}
+        fsGroup: {{ .Values.data.security_context.fs_group }}
       {{- end }}
       {{- end }}
-      serviceAccountName: {{ .Values.global.waiter.serviceAccount.name }}
+      serviceAccountName: {{ .Values.global.waiter.service_account.name }}
       initContainers:
         - name: ensure-{{ .Values.data.name }}
           image: {{ .Values.global.waiter.image }}
-          imagePullPolicy: {{ .Values.data.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.data.image_pull_policy }}
           env:
             - name: NAMESPACE
               value: {{ .Release.Namespace }}
@@ -35,68 +35,43 @@ spec:
       containers:
       - name: {{ .Values.data.name }}
         image: {{ tpl .Values.data.image $ | quote }}
-        imagePullPolicy: {{ .Values.data.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.data.image_pull_policy }}
         {{- if .Values.data.resources }}
         resources:
 {{ toYaml .Values.data.resources | indent 10 }}
         {{- end }}
         {{- if and .Values.global.environment (ne .Values.global.environment "openshift") }}
-        {{- if .Values.data.securityContext.enabled }}
+        {{- if .Values.data.security_context.enabled }}
         securityContext:
-          runAsUser: {{ .Values.data.securityContext.runAsUser }}
-          runAsGroup: {{ .Values.data.securityContext.runAsGroup }}
+          runAsUser: {{ .Values.data.security_context.run_as_user }}
+          runAsGroup: {{ .Values.data.security_context.run_as_group }}
         {{- end }}
         {{- end }}
         env:
           {{- include "data.envvars" (dict "envvar" .Values.data.envvars "top" $) | indent 8 }}
-        - name: MONGOHOST
-          value: {{ template "greymatter.mongo.address" . }}
-        
-        {{- if .Values.mongo.secret }}
-        - name: MONGO_USE_TLS
-          value: "true"
-        - name: MONGO_CERT
-          valueFrom: 
-            secretKeyRef: 
-              name: {{ .Values.mongo.secret.secret_name }}
-              key: {{ .Values.mongo.secret.secretKeys.cert }}
-        - name: MONGO_KEY
-          valueFrom: 
-            secretKeyRef: 
-              name: {{ .Values.mongo.secret.secret_name }}
-              key: {{ .Values.mongo.secret.secretKeys.key }}
-        - name: MONGO_TRUST
-          valueFrom: 
-            secretKeyRef: 
-              name: {{ .Values.mongo.secret.secret_name }}
-              key: {{ .Values.mongo.secret.secretKeys.ca }}
-        {{- end }}
         {{- if  (eq .Values.data.envvars.uses3.value  "false") }}
         volumeMounts:
           - name: data-pvc
-            mountPath: {{ tpl .Values.data.pvc.mountPath $ }}
+            mountPath: {{ tpl .Values.data.pvc.mount_point $ }}
         {{- end }}
       - name: sidecar
         image: {{ tpl .Values.sidecar.image $ | quote }}
-        imagePullPolicy: {{ .Values.sidecar.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.sidecar.image_pull_policy }}
         {{- if .Values.sidecar.resources }}
         resources:
 {{ toYaml .Values.sidecar.resources | indent 10 }}
         {{- end }}
         env:
-        {{- include "greymatter.envvars" . | indent 8 }}
+        {{- include "sidecar.envvars" . | indent 8 }}
         ports:
-        - containerPort: 8080
+        - containerPort: {{ .Values.sidecar.port }}
           name: proxy
           protocol: TCP
-        - containerPort: 8081
+        - containerPort: {{ .Values.sidecar.metrics_port }}
           name: metrics
           protocol: TCP
-        {{- if .Values.global.spire.enabled }}
         volumeMounts:
-        {{- include "sidecar_volume_mounts" . | indent 8 }}
-        {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
-        volumeMounts:
+        {{- if .Values.data.secret }}
         {{- include "sidecar_volume_certs_mount" . | indent 8 }}
         {{- end}}
       {{- if .Values.global.consul.enabled }}
@@ -108,12 +83,12 @@ spec:
             command:
               - /bin/sh
               - -c
-              - "curl -k --cacert /etc/proxy/tls/sidecar/ca.crt --key /etc/proxy/tls/sidecar/server.key --cert /etc/proxy/tls/sidecar/server.crt https://localhost:8181/list/1/"
+              - "curl -k --cacert {{ .Values.sidecar.secret.mount_point }}{{ .Values.sidecar.secret.secret_keys.ca }} --key {{ .Values.sidecar.secret.mount_point }}{{ .Values.sidecar.secret.secret_keys.key }} --cert {{ .Values.sidecar.secret.mount_point }}{{ .Values.sidecar.secret.secret_keys.cert }} https://localhost:8181/list/1/"
           initialDelaySeconds: 20
           periodSeconds: 5
 
       imagePullSecrets:
-      - name: {{ .Values.data.imagePullSecret | default "docker.secret" }}
+      - name: {{ .Values.global.image_pull_secret | default "docker.secret" }}
       volumes:
       {{- if .Values.global.consul.enabled }}
       - name: data-consul
@@ -121,9 +96,7 @@ spec:
       - name: config-consul
         emptyDir: {}
       {{- end }}
-      {{- if .Values.global.spire.enabled }}
-      {{- include "sidecar_volumes" . | indent 6 }}
-      {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
+      {{- if .Values.data.secret }}
       {{- include "sidecar_certs_volumes" . | indent 6 }}
       {{- end }}
       - name: data

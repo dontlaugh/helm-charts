@@ -2,7 +2,7 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   labels:
-    app: {{ .Values.redis.name | default "redis" }}
+    gm.proxy: {{ .Values.redis.name | default "redis" }}
   name: {{ .Values.redis.name | default "redis" }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -10,23 +10,19 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: {{ .Values.redis.name | default "redis" }}
+      gm.proxy: {{ .Values.redis.name | default "redis" }}
       deployment: {{ .Values.redis.name | default "redis" }}
   strategy:
-    activeDeadlineSeconds: 21600
-    resources: {}
-    rollingParams:
-      intervalSeconds: 1
+    rollingUpdate:
       maxSurge: 25%
       maxUnavailable: 25%
-      timeoutSeconds: 600
-      updatePeriodSeconds: 1
     type: RollingUpdate
+  progressDeadlineSeconds: 21600
   template:
     metadata:
       creationTimestamp: null
       labels:
-        app: {{ .Values.redis.name | default "redis" }}
+        gm.proxy: {{ .Values.redis.name | default "redis" }}
         deployment: {{ .Values.redis.name | default "redis" }}
     spec:
       containers:
@@ -47,16 +43,13 @@ spec:
               secretKeyRef:
                 name: {{ .Values.redis.secret.secret_name }}
                 key: password
-          imagePullPolicy: {{ .Values.redis.imagePullPolicy }}
+          imagePullPolicy: {{ .Values.redis.image_pull_policy }}
       {{- if .Values.redis.private_image }}
       imagePullSecrets:
-      - name: {{ .Values.global.imagePullSecret }}
+      - name: {{ .Values.global.image_pull_secret }}
       {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
-  test: false
-  triggers:
-    - type: ConfigChange

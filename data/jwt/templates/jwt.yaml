@@ -8,18 +8,18 @@ spec:
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      app: {{ .Values.jwt.name | default "jwt-security"  }}
+      gm.proxy: {{ .Values.jwt.name | default "jwt-security"  }}
       deployment: {{ .Values.jwt.name | default "jwt-security"  }}
   template:
     metadata:
       labels:
-        app: {{ .Values.jwt.name | default "jwt-security"  }}
+        gm.proxy: {{ .Values.jwt.name | default "jwt-security"  }}
         deployment: {{ .Values.jwt.name | default "jwt-security"  }}
     spec:
       containers:
       - name: jwt-security
         image: {{ tpl .Values.jwt.image $ | quote }}
-        imagePullPolicy: {{ .Values.jwt.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.jwt.image_pull_policy }}
         {{- if .Values.jwt.resources }}
         resources:
 {{ toYaml .Values.jwt.resources | indent 10 }}
@@ -32,54 +32,28 @@ spec:
         {{- end }}
 
         env:
-      {{- range $envvar := .Values.jwt.envvars }}
-      {{- $envName := $envvar.name | upper | replace "." "_" | replace "-" "_" }}
-        {{- if eq $envvar.type "secret" }}
-        - name: {{ $envName }}
-          valueFrom:
-            secretKeyRef:
-              name: {{ $envvar.secret }}
-              key: {{ $envvar.key }}
-        {{- else if eq $envvar.type "value" }}
-        - name: {{ $envName }}
-          value: {{ $envvar.value | quote }}
-        {{- end }}
-      {{- end  }}   
-        - name: REDIS_HOST
-          value: {{ .Values.redis.name }}.{{ .Release.Namespace }}.svc
-        - name:  REDIS_PORT
-          value: "6379"
-        - name: REDIS_DB
-          value: {{ .Values.jwt.redis_db | quote }}
-        - name: REDIS_PASS
-          valueFrom:
-            secretKeyRef:
-              name: {{ .Values.redis.secret.secret_name }}
-              key: password
+        {{- include "jwt.envvars" (dict "envvar" .Values.jwt.envvars "top" $) | indent 8 }}
         volumeMounts:
         - name: jwt-users
           mountPath: {{ .Values.jwt.users_mount_point }}
       
       - name: sidecar
         image: {{ tpl .Values.sidecar.image $ | quote }}
-        imagePullPolicy: {{ .Values.sidecar.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.sidecar.image_pull_policy }}
         env:
-        {{- include "greymatter.envvars" . | indent 8 }}
+        {{- include "sidecar.envvars" . | indent 8 }}
         {{- if .Values.sidecar.resources }}
         resources:
 {{ toYaml .Values.sidecar.resources | indent 10 }}
         {{- end }}
         ports:
-        - containerPort: 8080
+        - containerPort: {{ .Values.sidecar.port }}
           name: proxy
           protocol: TCP
-        - containerPort: 8081
+        - containerPort: {{ .Values.sidecar.metrics_port }}
           name: metrics
           protocol: TCP
-        {{- if .Values.global.spire.enabled }}
-        volumeMounts:
-        {{- include "sidecar_volume_mounts" . | indent 8 }}
-        {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
+        {{- if .Values.jwt.secret }}
         volumeMounts:
         {{- include "sidecar_volume_certs_mount" . | indent 8 }}
         {{- end }}
@@ -88,11 +62,9 @@ spec:
       {{- include "consul.agent" $data | nindent 6 }}
       {{- end }}
       imagePullSecrets:
-      - name: {{ .Values.global.imagePullSecret }}
+      - name: {{ .Values.global.image_pull_secret }}
       volumes:
-      {{- if .Values.global.spire.enabled }}
-      {{- include "sidecar_volumes" . | indent 6 }}
-      {{- else if and (not .Values.global.spire.enabled) (.Values.global.mesh_tls.use_provided_certs) }}
+      {{- if .Values.jwt.secret }}
       volumes:
       {{- include "sidecar_certs_volumes" . | indent 6 }}
       {{- end }}

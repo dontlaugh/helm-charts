@@ -2,7 +2,7 @@ kind: StatefulSet
 apiVersion: apps/v1
 metadata:
   labels:
-    app: {{ .Values.mongo.name }}
+    gm.proxy: {{ .Values.mongo.name }}
   name: {{ .Values.mongo.name }}
   namespace: {{ .Release.Namespace }}
 spec:
@@ -11,12 +11,12 @@ spec:
   replicas: {{ .Values.mongo.replicas }}
   selector:
     matchLabels:
-      app: {{ .Values.mongo.name }}
+      gm.proxy: {{ .Values.mongo.name }}
   serviceName: {{ .Values.mongo.name }}
   template:
     metadata:
       labels:
-        app: {{ .Values.mongo.name }}
+        gm.proxy: {{ .Values.mongo.name }}
     spec:
       {{- if and .Values.global.environment (eq .Values.global.environment "eks") }}
       securityContext:
@@ -28,7 +28,7 @@ spec:
       - env:
         {{- include "data.envvars" (dict "envvar" .Values.mongo.envvars "top" $) | indent 8 }}
         image: {{ tpl .Values.mongo.image $ | quote }}
-        imagePullPolicy: {{ .Values.mongo.imagePullPolicy }}
+        imagePullPolicy: {{ .Values.mongo.image_pull_policy }}
         {{- if .Values.mongo.resources }}
         resources:
 {{ toYaml .Values.mongo.resources | indent 10 }}
@@ -39,13 +39,13 @@ spec:
           name: mongo
           protocol: TCP
         volumeMounts:
-        - mountPath: {{ .Values.mongo.storage.mountPath }}
+        - mountPath: {{ .Values.mongo.storage.mount_path }}
           name: data
         - mountPath: /docker-entrypoint-initdb.d/
           name: mongo-init
         {{- if .Values.mongo.secret }}
         - name: certificates
-          mountPath: {{ .Values.mongo.secret.mountPoint }}
+          mountPath: {{ .Values.mongo.secret.mount_point }}
         {{- end }}
       volumes:
         - name: mongo-init
@@ -58,7 +58,7 @@ spec:
         {{- end }}
       {{- if .Values.mongo.private_image }}
       imagePullSecrets:
-      - name: {{ .Values.global.imagePullSecret }}
+      - name: {{ .Values.global.image_pull_secret }}
       {{- end }}
   volumeClaimTemplates:
   - metadata:
@@ -69,10 +69,10 @@ spec:
       resources:
         requests:
           storage: {{ .Values.mongo.storage.size }}Gi
-    {{- if .Values.mongo.storage.storageClass }}
-    {{- if (eq "-" .Values.mongo.storage.storageClass) }}
+    {{- if .Values.mongo.storage.storage_class }}
+    {{- if (eq "-" .Values.mongo.storage.storage_class) }}
       storageClassName: ""
     {{- else }}
-      storageClassName: "{{ .Values.mongo.storage.storageClass }}"
+      storageClassName: "{{ .Values.mongo.storage.storage_class }}"
     {{- end }}
     {{- end }}

@@ -1,44 +1,45 @@
+# Grey Matter JWT Gov Security Defaults
+
 global:
-
-  imagePullSecret: docker.secret
-
+  # Used as imagePullSecrets value for each subchart
+  image_pull_secret: docker.secret
+  # Deployment environment, one of "eks", "kuberenetes", or "openshift"
   environment: kubernetes
-  domain:
-  route_url_name:
-  remove_namespace_from_url: ''
   exhibitor:
     replicas: 1
-  xds:
-    port: 18000
-    cluster: greymatter
-  jwt:
-    version: 1.0.0
-    sidecar:
-      version: latest
-  sidecar:
-    version: latest
+  # Port for Grey Matter Control. Used in sidecar envvars
+  control_port: 50000
+  # Zone for Grey Matter objects. Used in sidecar envvars
+  zone: zone-default-zone
+  # Whether or not to use spire
   spire:
     enabled: false
-  mesh_tls:
-    use_provided_certs: true
+  # Whether to register services with Consul and where to find the Consul server
+  consul:
+    enabled: false
+  sidecar:
+    version: 1.2.0
 
 jwt:
-  version: '{{ tpl $.Values.global.jwt.version $ }}'
-  use_aac: true # when deploying the jwt-gov version, this should be set to 'true' if you want jwt to use aac for auth control
-  image: 'docker.production.deciphernow.com/deciphernow/gm-jwt-security-gov:{{ tpl $.Values.jwt.version $ }}'
+  version: '1.0.1'
+  # If true, uses aac for auth control
+  use_aac: false
+  image: 'docker-dev.production.deciphernow.com/deciphernow/gm-jwt-security-gov:{{ tpl $.Values.jwt.version $ }}'
   command: ['/bin/sh']
   args:
     [
       '-c',
-      'if [[ ! -d ./certs ]]; then mkdir -p ./certs; fi && if [[ ! -d ./certs/aac ]]; then mkdir -p ./certs/aac; fi && if [[ ! -d ./etc ]]; then mkdir -p ./certs; fi && /app/gm-jwt-security-gov.linux',
+      'if [[ ! -d ./certs ]]; then mkdir -p ./certs; fi && if [[ ! -d ./certs/aac ]]; then mkdir -p ./certs/aac; fi && if [[ ! -d ./etc ]]; then mkdir -p ./certs; fi && /gm-jwt-security-gov/gm-jwt-security-gov',
 
     ]
-  redis_db: '0'
-  redis_pass: redis
-  egress_use_tls: 'true'
-  users_mount_point: /gm-jwt-security/etc
-  certs_mount_point: /gm-jwt-security/certs
-  imagePullPolicy: IfNotPresent
+  # If set, enables tls using the secret specified in secret_name
+  #secret:
+  #  secret_name: jwt-certs
+  #  mount_point: /gm-jwt-security/certs
+  # Location to mount the information specified in users_cg_name in the container
+  users_mount_point: /gm-jwt-security-gov/etc
+  users_cg_name: jwt-users
+  image_pull_policy: IfNotPresent
   resources:
     limits:
       cpu: 200m
@@ -48,41 +49,56 @@ jwt:
       memory: 64Mi
 
   envvars:
-    - type: value
-      name: HTTPS_PORT
+    https_port:
+      type: value
       value: '3000'
-    - type: secret
-      name: PRIVATE_KEY
+    private_key:
+      type: secret
       secret: jwt-security
       key: jwt.key
-    - type: secret
-      name: JWT_API_KEY
+    jwt_api_key:
+      type: secret
       secret: jwt-security
       key: jwt.api_key
-    - type: value
-      name: ENABLE_TLS
-      value: true
-    - type: secret
-      name: SERVER_TRUST
+    enable_tls:
+      type: value
+      value: 'true'
+    server_trust:
+      type: secret
       secret: jwt-certs
       key: jwt.trust.pem
-    - type: secret
-      name: SERVER_CERT
+    server_cert:
+      type: secret
       secret: jwt-certs
       key: jwt.cert.pem
-    - type: secret
-      name: SERVER_KEY
+    server_key:
+      type: secret
       secret: jwt-certs
       key: jwt.key.pem
-    - type: value
-      name: ZEROLOG_LEVEL
-      value: info
-    - type: value
-      name: TOKEN_EXP_TIME
+    zerolog_level:
+      type: value
+      value: 'info'
+    token_exp_time:
+      type: value
       value: '300'
+    redis_port:
+      type: value
+      value: "6379"
+    redis_db:
+      type: value
+      value: "0"
+    redis_host:
+      type: value
+      value: '{{ .Values.redis.name }}.{{ .Release.Namespace }}.svc'
+    redis_pass:
+      type: secret
+      secret: '{{ .Values.redis.secret.secret_name | default "redis-password" }}'
+      key: password
+    demo_mode:
+      type: value
+      value: '{{- if .Values.jwt.use_aac }}false{{- else }}true{{- end }}'
 
-
-  # A JSON list of users and their AOs that will be permited access to JWT
+  # Provides a list of authorized users for the JWT service
   users: |-
     [
       {
@@ -166,31 +182,40 @@ jwt:
           
 
 redis:
+  # Name used for the redis deployment and service resources
   name: redis
+  # The secret containing the password to configure the environment variable REDIS_PASSWORD
   secret:
     secret_name: redis-password
   password: 'redis'
+  # Redis image to use when global.environment=openshift
   openshift:
     image: 'centos/redis-32-centos7'
+  # Redis image to use when global.environment=kubernetes
   k8s:
     image: 'redis:3.2'
   replica_count: 1
-  imagePullPolicy: IfNotPresent
-  #private_image: false
+  image_pull_policy: IfNotPresent
+  # Uses global.image_pull_secret if true
+  private_image: false
 
+# Sets default sidecar configurations for all sidecars
 sidecar:
-  version: '{{- $.Values.global.jwt.sidecar.version | default $.Values.global.sidecar.version }}'
-  image: 'docker-dev.production.deciphernow.com/deciphernow/gm-proxy:{{ tpl $.Values.sidecar.version $ }}'
-  imagePullPolicy: IfNotPresent
-  envvars:
-    xds_cluster:
-      type: value
-      value: 'jwt-security'
-
+  version: '{{ .Values.global.sidecar.version | default "latest" }}'
+  # Port where the proxy will listen
+  port: 10808
+  # Port where the proxy will expose metrics
+  metrics_port: 8081
+  # If set, enables tls using the secret specified in secret_name
   secret:
     secret_name: sidecar-certs
-    mountPoint: /etc/proxy/tls/sidecar
-    secretKeys:
-      ca: ca.crt
-      cert: service.crt
-      key: service.key
+    mount_point: /etc/proxy/tls/sidecar
+  image: 'docker-dev.production.deciphernow.com/deciphernow/gm-proxy:{{ tpl $.Values.sidecar.version $ }}'
+  image_pull_policy: IfNotPresent
+  resources:
+    limits:
+      cpu: 200m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi

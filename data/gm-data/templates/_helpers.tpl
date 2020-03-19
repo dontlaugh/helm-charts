@@ -17,7 +17,7 @@ Define the mongo host.
 {{- range $i, $e := until (atoi (printf "%d" (int64 .Values.mongo.replicas))) -}} 
 {{- $noop := printf "%s%s%d.%s.%s.%s"  $.Values.mongo.name "-" . $.Values.mongo.name $.Release.Namespace "svc:27017" | append $mongo.servers | set $mongo "servers" -}}
 {{- end -}}
-{{- join "," $mongo.servers | quote -}}
+{{- join "," $mongo.servers -}}
 {{- end -}}
 
 {{/*
@@ -34,6 +34,6 @@ Define where to mount the sidecar certs.  Required here to support a standalone 
 */}}
 {{- define "sidecar_volume_certs_mount" }}
 - name: sidecar-certs
-  mountPath: {{ .Values.sidecar.secret.mountPoint }}
+  mountPath: {{ .Values.sidecar.secret.mount_point }}
   readOnly: true
 {{- end }}
