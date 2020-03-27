@@ -29,12 +29,12 @@ spec:
             - "-t"
             - "30"
             - "server:8443"
-        #- name: init-registrar
-        #  image: gcr.io/spiffe-io/wait-for-it
-        #  args:
-        #    - "-t"
-        #    - "30"
-        #    - "registrar:8444"
+        - name: init-registrar
+          image: gcr.io/spiffe-io/wait-for-it
+          args:
+            - "-t"
+            - "30"
+            - "registrar:8444"
       containers:
         - name: agent
           image: {{ .Values.agent.image }}
@@ -48,12 +48,19 @@ spec:
             - name: agent-socket
               mountPath: /run/spire/socket
               readOnly: false
+            - name: server-bundle
+              mountPath: /run/spire/bundle
+              readOnly: true
+            - name: agent-token
+              mountPath: /run/spire/token
+              readOnly: false
           livenessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - "/opt/spire/bin/spire-agent api fetch -socketPath /run/spire/socket/agent.sock 2>&1 | grep -vqE 'connection refused|no such file or directory'"
+                - /opt/spire/bin/spire-agent
+                - healthcheck
+                - -socketPath
+                - /run/spire/socket/agent.sock
             failureThreshold: 2
             initialDelaySeconds: 15
             periodSeconds: 60
@@ -66,3 +73,13 @@ spec:
           hostPath:
             path: /run/spire/socket
             type: DirectoryOrCreate
+        - name: server-bundle
+          configMap:
+            name: server-bundle
+        - name: agent-token
+          projected:
+            sources:
+              - serviceAccountToken:
+                  path: agent
+                  expirationSeconds: 7200
+                  audience: server

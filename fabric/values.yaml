@@ -18,7 +18,7 @@ global:
   control_additional_namespaces:
   # Whether or not to use spire for cert management and the trust domain
   spire:
-    enabled: false
+    enabled: true
     trust_domain: quickstart.greymatter.io
   # Configures the init container used to wait on various deployments to be ready
   waiter:                               
@@ -53,9 +53,9 @@ global:
         type: 'value'
         value: '/dev/stdout'
       # SPIRE: If spire is enabled, uncomment spire_path
-      #spire_path:
-      #  type: 'value'
-      #  value: '/run/spire/socket/agent.sock'
+      spire_path:
+        type: 'value'
+        value: '/run/spire/socket/agent.sock'
 
 control:
   control:
@@ -223,14 +223,14 @@ control-api:
       size: 1Gi
     
   # SPIRE: If spire is enabled, uncomment these bootstrap envvars
-  #bootstrap:
-  #  envvars:
-  #    greymatter_api_ssl:
-  #      type: value
-  #      value: '{{ not .Values.global.spire.enabled }}'
-  #    spire_enabled:
-  #      type: 'value'
-  #      value: '{{ .Values.global.spire.enabled }}'
+  bootstrap:
+    envvars:
+      greymatter_api_ssl:
+        type: value
+        value: '{{ not .Values.global.spire.enabled }}'
+      spire_enabled:
+        type: 'value'
+        value: '{{ .Values.global.spire.enabled }}'
 
 
 # Services list used to create Grey Matter configuration objects in control-api/config

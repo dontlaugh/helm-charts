@@ -24,9 +24,26 @@ spec:
       serviceAccountName: server
       shareProcessNamespace: true
       containers:
+        - name: registrar
+          image: gcr.io/spiffe-io/k8s-workload-registrar:0.9.3
+          args:
+            - -config
+            - /run/spire/config/registrar.conf
+          ports:
+            - name: registrar
+              containerPort: 8444
+          volumeMounts:
+            - name: server-config
+              mountPath: /run/spire/config
+              readOnly: true
+            - name: server-socket
+              mountPath: /run/spire/socket
+              readOnly: false
+            - name: server-tls
+              mountPath: /run/spire/tls
+              readOnly: true
         - name: server
           image:  {{ .Values.server.image }}
-          command: ["/tmp/bootstrap/bootstrap.sh"]
           args:
             - -config
             - /run/spire/config/server.conf
@@ -40,56 +57,34 @@ spec:
             - name: server-data
               mountPath: /run/spire/data
               readOnly: false
-            - name: server-secrets
-              mountPath: /run/spire/secrets
+            - name: server-ca
+              mountPath: /run/spire/ca
               readOnly: true
-            - name: service-list
-              mountPath: /etc/config
-            - name: bootstrap-script-volume
-              mountPath: /tmp/bootstrap
-          env:
-            # The following environment variables are used by the spire bootstrap script to properly create registration entries
-            - name: SERVICE_LIST_FILE
-              value: /etc/config/services.txt
-            - name: TRUST_DOMAIN
-              value: {{ .Values.global.spire.trust_domain }}
-            - name: KUBERNETES_NAMESPACE
-              value: default
-            - name: CONFIG_FILE_PATH
-              value: {{ .Values.server.config_file_path }}
-            - name: REGISTRATION_API_PATH
-              value: {{ .Values.global.spire.registration_api_path }}
-            - name: CLUSTER_NAME
-              value: {{ .Values.global.spire.cluster_name }}
-            - name: AGENT_NAMESPACE
-              value: {{ .Values.global.spire.namespace }}
-            - name: AGENT_SERVICEACCOUNT
-              value: agent
+            - name: server-socket
+              mountPath: /run/spire/socket
+              readOnly: false
           livenessProbe:
-            tcpSocket:
-              port: 8443
+            exec:
+              command:
+                - /opt/spire/bin/spire-server
+                - healthcheck
+                - --registrationUDSPath=/run/spire/socket/registration.sock
             failureThreshold: 2
             initialDelaySeconds: 15
             periodSeconds: 60
             timeoutSeconds: 3
-          readinessProbe:
-            tcpSocket:
-              port: 8443
-            initialDelaySeconds: 5
-            timeoutSeconds: 3
       volumes:
+        - name: server-socket
+          emptyDir:
+            medium: Memory
+        - name: server-ca
+          secret:
+            secretName: server-ca
         - name: server-config
           configMap:
             name: server-config
-        - name: server-secrets
+        - name: server-tls
           secret:
-            secretName: server-key
+            secretName: server-tls
         - name: server-data
           emptyDir: {}
-        - name: service-list
-          configMap:
-            name: service-list
-        - name: bootstrap-script-volume
-          configMap:
-            name: server-bootstrap-script
-            defaultMode: 0777

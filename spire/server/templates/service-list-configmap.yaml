@@ -1,9 +1,0 @@
-  
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: service-list
-  namespace: {{ .Values.global.spire.namespace }}
-data:
-  services.txt: |
-    {{ range $name, $service := .Values.gm_services }}{{$service.serviceName}} {{ end }}

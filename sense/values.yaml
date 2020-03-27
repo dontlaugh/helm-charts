@@ -18,7 +18,7 @@ global:
   control_additional_namespaces:   
   # Whether or not to use spire for cert management and the trust domain
   spire:
-    enabled: false
+    enabled: true
     trust_domain: quickstart.greymatter.io                
   # Configures the init container used to wait on various deployments to be ready
   waiter:
@@ -49,9 +49,9 @@ global:
         type: 'value'
         value: '/dev/stdout'
       # SPIRE: If spire is enabled, uncomment spire_path
-      #spire_path:
-      #  type: 'value'
-      #  value: '/run/spire/socket/agent.sock'
+      spire_path:
+        type: 'value'
+        value: '/run/spire/socket/agent.sock'
   
 
 slo:   
@@ -410,11 +410,11 @@ catalog:
           value: '{{ .Values.catalog.name }}'
 
     # SPIRE: If spire is enabled, uncomment to set init job use_tls to false
-    #init:
-    #  envvars:
-    #    use_tls:
-    #      type: value
-    #      value: ''
+    init:
+      envvars:
+        use_tls:
+          type: value
+          value: 'false'
 
 # Services list used to configure Catalog, which populates service metadata for GM Dashboard
 services:

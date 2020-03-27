@@ -1,7 +1,7 @@
 global:
   spire:
     trust_domain: quickstart.greymatter.io
-    namespace: default
+    namespace: spire
 
 agent:
   name: agent

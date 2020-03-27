@@ -4,20 +4,31 @@ metadata:
   name: server-config
   namespace: {{ .Values.global.spire.namespace }}
 data:
+  registrar.conf: |-
+    log_level = "info"
+    log_path = "/dev/stdout"
+    addr = "0.0.0.0:8444"
+    cluster = "quickstart"
+    server_socket_path = "/run/spire/socket/registration.sock"
+    trust_domain = "quickstart.greymatter.io"
+    cert_path = "/run/spire/tls/registrar.spire.svc.crt"
+    key_path = "/run/spire/tls/registrar.spire.svc.key"
+    cacert_path = "/run/spire/tls/ca.crt"
+    insecure_skip_client_verification	= true
   server.conf: |-
     server {
       bind_address = "0.0.0.0"
       bind_port = "8443"
-      registration_uds_path = "{{ .Values.global.spire.registration_api_path }}"
-      trust_domain = "{{ .Values.global.spire.trust_domain }}"
+      registration_uds_path = "/run/spire/socket/registration.sock"
+      trust_domain = "quickstart.greymatter.io"
       data_dir = "/run/spire/data"
-      log_level = "DEBUG"
+      log_level = "info"
       upstream_bundle = true
       default_svid_ttl = "1h"
       ca_subject = {
         country = ["US"],
-        organization = ["SPIFFE"],
-        common_name = "Grey Matter SPIFFE CA",
+        organization = ["Grey Matter"],
+        common_name = "Quickstart",
       }
     }
 
@@ -29,12 +40,12 @@ data:
         }
       }
 
-      NodeAttestor "k8s_sat" {
+      NodeAttestor "k8s_psat" {
         plugin_data {
           clusters = {
             "quickstart" = {
-              service_account_whitelist = ["{{ .Values.global.spire.namespace }}:agent"]
-              use_token_review_api_validation = true
+              service_account_whitelist = ["spire:agent"]
+              audience = ["server"]
             }
           }
         }
@@ -50,24 +61,17 @@ data:
         }
       }
 
+      Notifier "k8sbundle" {
+        plugin_data {
+          config_map = "server-bundle"
+        }
+      }
+
       UpstreamCA "disk" {
         plugin_data {
-          cert_file_path = "/run/spire/config/bootstrap.crt"
-          key_file_path = "/run/spire/secrets/bootstrap.key"
+          cert_file_path = "/run/spire/ca/intermediate.crt"
+          key_file_path = "/run/spire/ca/intermediate.key"
+          bundle_file_path = "/run/spire/ca/root.crt"
         }
       }
     }
-
-  bootstrap.crt: |-
-    -----BEGIN CERTIFICATE-----
-    MIIBzDCCAVOgAwIBAgIJAJM4DhRH0vmuMAoGCCqGSM49BAMEMB4xCzAJBgNVBAYT
-    AlVTMQ8wDQYDVQQKDAZTUElGRkUwHhcNMTgwNTEzMTkzMzQ3WhcNMjMwNTEyMTkz
-    MzQ3WjAeMQswCQYDVQQGEwJVUzEPMA0GA1UECgwGU1BJRkZFMHYwEAYHKoZIzj0C
-    AQYFK4EEACIDYgAEWjB+nSGSxIYiznb84xu5WGDZj80nL7W1c3zf48Why0ma7Y7m
-    CBKzfQkrgDguI4j0Z+0/tDH/r8gtOtLLrIpuMwWHoe4vbVBFte1vj6Xt6WeE8lXw
-    cCvLs/mcmvPqVK9jo10wWzAdBgNVHQ4EFgQUh6XzV6LwNazA+GTEVOdu07o5yOgw
-    DwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMCAQYwGQYDVR0RBBIwEIYOc3Bp
-    ZmZlOi8vbG9jYWwwCgYIKoZIzj0EAwQDZwAwZAIwE4Me13qMC9i6Fkx0h26y09QZ
-    IbuRqA9puLg9AeeAAyo5tBzRl1YL0KNEp02VKSYJAjBdeJvqjJ9wW55OGj1JQwDF
-    D7kWeEB6oMlwPbI/5hEY3azJi16I0uN1JSYTSWGSqWc=
-    -----END CERTIFICATE-----
