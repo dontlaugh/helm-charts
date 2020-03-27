@@ -262,6 +262,7 @@ services:
     routes:
       - '/services/catalog/{{ $.Values.services.catalog.version }}'
       - '/services/catalog/{{ $.Values.services.catalog.version }}/'
+    service_account_name: waiter-sa
 
   # control:
   #   name: 'Grey Matter Control'
@@ -294,6 +295,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
 
   prometheus:
@@ -305,6 +307,7 @@ services:
     port: 9090
     secret:
       enabled: false
+    service_account_name: prometheus-sa
 
   data:
     catalogEnabled: true
@@ -332,6 +335,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa
 
   internal-data:
     catalogEnabled: false
@@ -357,6 +361,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa
 
   jwt:
     catalogEnabled: true
@@ -382,6 +387,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   internal-jwt:
     catalogEnabled: false
@@ -404,6 +410,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   controlApi:
     catalogEnabled: true
@@ -429,6 +436,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   edge:
     catalogEnabled: true
@@ -464,6 +472,8 @@ services:
           cert: server.crt
           key: server.key
           ca: ca.crt
+    service_account_name: default
+
   slo:
     catalogEnabled: true
     controlEnabled: true
@@ -488,3 +498,4 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa

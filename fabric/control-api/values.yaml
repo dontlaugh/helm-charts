@@ -184,7 +184,7 @@ services:
     version: 1.0.1
     minInstances: 1
     maxInstances: 1
-    secret:          
+    secret:
       enabled: true  
       secret_name: sidecar-certs
       mount_point: /etc/proxy/tls/sidecar
@@ -196,6 +196,7 @@ services:
     routes:
       - '/services/catalog/{{ $.Values.services.catalog.version }}'
       - '/services/catalog/{{ $.Values.services.catalog.version }}/'
+    service_account_name: waiter-sa
 
   # control:
   #   name: 'Grey Matter Control'
@@ -219,7 +220,7 @@ services:
     routes:
       - '/services/dashboard/latest'
       - '/services/dashboard/latest/'
-    secret:          
+    secret:
       enabled: true  
       secret_name: sidecar-certs
       mount_point: /etc/proxy/tls/sidecar
@@ -228,6 +229,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
 
   prometheus:
@@ -239,6 +241,7 @@ services:
     port: 9090
     secret:
       enabled: false
+    service_account_name: prometheus-sa
 
   data:
     catalogEnabled: true
@@ -266,6 +269,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa
 
   internal-data:
     catalogEnabled: false
@@ -291,6 +295,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa
 
   jwt:
     catalogEnabled: true
@@ -316,6 +321,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   internal-jwt:
     catalogEnabled: false
@@ -338,6 +344,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   controlApi:
     catalogEnabled: true
@@ -363,6 +370,7 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: default
 
   edge:
     catalogEnabled: true
@@ -377,7 +385,7 @@ services:
     removeListenerSecret: true
     enableInstanceMetrics: 'true'
     capability: 'Mesh'
-    documentatio: ''
+    documentation: ''
     owner: 'Decipher'
     version: '1.2.0'
     ingress:
@@ -398,6 +406,7 @@ services:
           cert: server.crt
           key: server.key
           ca: ca.crt
+    service_account_name: default
 
   slo:
     catalogEnabled: true
@@ -423,3 +432,4 @@ services:
         cert: server.crt
         key: server.key
         ca: ca.crt
+    service_account_name: waiter-sa

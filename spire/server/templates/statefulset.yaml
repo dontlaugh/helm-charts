@@ -86,5 +86,13 @@ spec:
         - name: server-tls
           secret:
             secretName: server-tls
-        - name: server-data
-          emptyDir: {}
+  volumeClaimTemplates:
+    - metadata:
+        name: server-data
+        namespace: spire
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi

@@ -15,6 +15,9 @@
       "metrics_ring_buffer_size": 4096,
       "prometheus_system_metrics_interval_seconds": 15,
       "metrics_key_function": "none"
+    },
+    "gm_inheaders": {
+
     }
   }
 }
