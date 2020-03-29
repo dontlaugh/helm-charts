@@ -21,7 +21,7 @@ global:
       name: waiter-sa
   # Global sidecar configuration (supports global version and envvars)
   sidecar:
-    version: 1.2.0
+    version: 1.2.2
   # Whether or not to use spire for cert management and the trust domain
   spire:
     enabled: false

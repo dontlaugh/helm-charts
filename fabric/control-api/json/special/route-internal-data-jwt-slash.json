@@ -5,7 +5,11 @@
   "path": "{{ .Values.services.data.jwt_prefix }}",
   "prefix_rewrite": "{{ .Values.services.data.jwt_prefix }}/",
   "redirects": null,
+  {{- if .Values.global.spire.enabled }}
+  "shared_rules_key": "data-internal-jwt-shared-rules",
+  {{- else }}
   "shared_rules_key": "edge-internal-jwt-security-shared-rules",
+  {{- end }}
   "rules": null,
   "response_data": {},
   "cohort_seed": null,

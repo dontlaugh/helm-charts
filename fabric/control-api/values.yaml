@@ -26,7 +26,7 @@ global:
       name: waiter-sa
   # Global sidecar configuration
   sidecar:
-    version: 1.2.0
+    version: 1.2.2
     dn: C=US,ST=Virginia,L=Alexandria,O=Decipher Technology Studios,OU=Engineering,CN=greymatter
   # Whether or not to use spire for cert management and the trust domain
   spire:
@@ -41,7 +41,7 @@ controlApi:
   display_name: control-api            
   # Number of replicas for the deployment
   replicas: 1                         
-  version: 1.2.0
+  version: 1.2.1
   image: 'docker-dev.production.deciphernow.com/deciphernow/gm-control-api:{{ .Values.controlApi.version }}'
   # When to pull images, used in the deployment
   image_pull_policy: IfNotPresent       

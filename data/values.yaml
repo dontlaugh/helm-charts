@@ -21,7 +21,7 @@ global:
 
   # Default configuration for all sidecars in all subcharts
   sidecar: 
-    version: '1.2.0'
+    version: '1.2.2'
     envvars:
       xds_cluster:
         type: value

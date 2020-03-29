@@ -30,7 +30,7 @@ global:
     trust_domain: quickstart.greymatter.io
 
 edge:
-  version: '1.2.0'
+  version: '1.2.2'
   image: 'docker-dev.production.deciphernow.com/deciphernow/gm-proxy:{{ tpl $.Values.edge.version $ }}'
   image_pull_policy: IfNotPresent
   # Port where the edge proxy will listen
