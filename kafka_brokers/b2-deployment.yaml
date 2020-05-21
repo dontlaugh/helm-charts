@@ -1,0 +1,70 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-broker2
+  namespace: observables
+spec:
+  selector:
+    matchLabels:
+      greymatter.io/control: kafka-broker2
+      deployment: kafka-broker2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        greymatter.io/control: kafka-broker2
+        deployment: kafka-broker2
+    spec:
+      containers:
+        - name: sidecar
+          image: "docker-dev.production.deciphernow.com/deciphernow/gm-proxy:1.4.0"
+          imagePullPolicy: "IfNotPresent"
+          args:
+            - -c
+            - /etc/greymatter/config.yaml
+          command:
+            - /app/gm-proxy
+          env:            
+            - name: PROXY_DYNAMIC
+              value: "true"
+            - name: SPIRE_PATH
+              value: "/run/spire/socket/agent.sock"
+            - name: XDS_CLUSTER
+              value: "proxy"
+            - name: XDS_HOST
+              value: "control.greymatter.svc.cluster.local"
+            - name: XDS_PORT
+              value: "50000"
+            - name: XDS_ZONE
+              value: "zone-default-zone"
+          ports:
+          - containerPort: 9092
+            protocol: TCP
+            name: proxy
+          - containerPort: 8081
+            protocol: TCP
+            name: metrics
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - name: spire-socket
+              mountPath: /run/spire/socket
+              readOnly: false
+            - name: sidecar-config
+              mountPath: /etc/greymatter
+              readOnly: true
+      dnsPolicy: ClusterFirst
+      imagePullSecrets:
+        - name: docker.secret
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      volumes:
+        - name: spire-socket
+          hostPath:
+            path: /run/spire/socket
+            type: DirectoryOrCreate
+        - name: sidecar-config
+          configMap:
+            name: kafka-broker2-sidecar

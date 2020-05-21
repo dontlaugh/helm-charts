@@ -24,7 +24,7 @@ global:
     trust_domain: quickstart.greymatter.io
     path: '/run/spire/socket/agent.sock'
   # Comma delimited string of namespaces for control to monitor. Also used by prometheus.    
-  control_additional_namespaces:
+  control_additional_namespaces: 'observables'
   # Configures the init container used to wait on various deployments to be ready
   waiter:                               
     image: deciphernow/k8s-waiter:latest

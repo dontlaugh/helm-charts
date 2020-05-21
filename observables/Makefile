@@ -65,7 +65,6 @@ logstash: helm-dep-up
 	helm fetch elastic/logstash --version 7.5.2
 	helm template $(LOGSTASH-NAME) \
 		--namespace $(LOGSTASH-NAMESPACE) \
-		-f custom-values-files/logstash-values.yaml \
 		--set extraEnvs[2].value=$(LOGSTASH-NAMESPACE) \
 		logstash-7.5.2.tgz > manifest.yaml
 	kubectl apply -f manifest.yaml --namespace $(LOGSTASH-NAMESPACE) --validate=false $(DRYRUN)
