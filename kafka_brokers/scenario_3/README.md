@@ -72,6 +72,14 @@ After startup, `greymatter edit listener fibonacci-listener` and add `gm.observa
 
 Make any request to the fibonacci service `https://localhost:30000/services/fibonacci`.
 
+In the fibonacci sidecar logs, you should see:
+
+```bash
+INF Message publishing to Kafka Encryption= EncryptionKeyID=0 Filter=Observables Topic=fibonacci
+```
+
+If this isn't there, edit the `fibonacci-listener` again, remove `gm.observables` from the list of active http filters, bounce the fibonacci pod and try to enable it again. (looking into why this is happening to me sometimes)
+
 To test, following the [testing section](#testing).
 
 ## Testing
@@ -117,14 +125,14 @@ Topic: fibonacci-scenario3	PartitionCount: 1	ReplicationFactor: 1	Configs:
 	Topic: fibonacci-scenario3	Partition: 0	Leader: 1	Replicas: 1	Isr: 1
 ```
 
-The number listed after `Leader` is the broker to check for the logs, so in this example it would be broker 1. Exec into the pod for broker 1 to check the logs for the observables:
+The number listed after `Leader` is the broker to check for the logs, so in this example it would be broker 1. Exit and exec into the pod for the leader to check the logs for the observables:
 
 ```bash
-kubectl exec -it kafka-observables-1 /bin/bash -n observables
+kubectl exec -it kafka-observables-<LEADER-NUMBER> /bin/bash -n observables
 cat /bitnami/kafka/data/fibonacci-scenario3-0/00000000000000000000.log
 ```
 
-You should see the observables!
+You should see the observable!
 
 ### Purposefully breaking it
 
