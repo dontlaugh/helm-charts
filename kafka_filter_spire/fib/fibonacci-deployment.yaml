@@ -1,0 +1,73 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: fibonacci
+    greymatter.io/control: fibonacci
+  name: fibonacci
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fibonacci
+      greymatter.io/control: fibonacci
+  template:
+    metadata:
+      labels:
+        app: fibonacci
+        greymatter.io/control: fibonacci
+    spec:
+      containers:
+        - name: fibonacci
+          image: docker.production.deciphernow.com/services/fibonacci:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+        - name: sidecar
+          image: "docker-dev.production.deciphernow.com/deciphernow/gm-proxy:1.4.0"
+          imagePullPolicy: IfNotPresent
+          args:
+            - -c
+            - /etc/greymatter/config.yaml
+          command:
+            - /app/gm-proxy
+          ports:
+            - name: metrics
+              containerPort: 8081
+            - name: proxy
+              containerPort: 10808
+          env:
+            - name: ENVOY_ADMIN_LOG_PATH
+              value: "/dev/stdout"
+            - name: PROXY_DYNAMIC
+              value: "true"
+            - name: SPIRE_PATH
+              value: "/run/spire/socket/agent.sock"
+            - name: XDS_CLUSTER
+              value: "fibonacci"
+            - name: XDS_HOST
+              value: "control.default.svc"
+            - name: XDS_NODE_ID
+              value: "default"
+            - name: XDS_PORT
+              value: "50000"
+            - name: XDS_ZONE
+              value: "zone-default-zone"
+          volumeMounts:
+            - name: spire-socket
+              mountPath: /run/spire/socket
+              readOnly: false
+            - name: sidecar-config
+              mountPath: /etc/greymatter
+              readOnly: true
+      imagePullSecrets:
+        - name: docker.secret
+      volumes:
+        - name: spire-socket
+          hostPath:
+            path: /run/spire/socket
+            type: DirectoryOrCreate
+        - name: sidecar-config
+          configMap:
+            name: fibonacci-sidecar

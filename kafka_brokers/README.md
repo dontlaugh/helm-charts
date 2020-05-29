@@ -4,14 +4,33 @@ To set up sidecars using the kafka broker filter and test, do the following:
 
 `make install` from the home directory of the helm charts.
 
-Install kafka:
+Now, the files in `kafka_brokers` directory deploy 3 Grey Matter sidecars, one for each broker. Each sidecar will have one listener, with the `kafka_brokers` and `tcp_proxy` filter turned on, and the kafka_brokers filter will be pointing at a broker. You can see these configurations in the `b0-configmap.yaml`, `b1-configmap.yaml`, and `b2-configmap.yaml`.
 
 ```bash
 cd observables
 make namespace
 kubectl get secret docker.secret --export -o yaml | kubectl apply --namespace=observables -f -
 kubectl get secret sidecar-certs --export -o yaml | kubectl apply --namespace=observables -f -
-make kafka
+cd ..
+kubectl apply -f kafka_brokers/b0-configmap.yaml
+kubectl apply -f kafka_brokers/b1-configmap.yaml
+kubectl apply -f kafka_brokers/b2-configmap.yaml
+kubectl apply -f kafka_brokers/b0-deployment.yaml
+kubectl apply -f kafka_brokers/b1-deployment.yaml
+kubectl apply -f kafka_brokers/b2-deployment.yaml
+kubectl apply -f kafka_brokers/b0-svc.yaml
+kubectl apply -f kafka_brokers/b1-svc.yaml
+kubectl apply -f kafka_brokers/b2-svc.yaml
+```
+
+When this is done, there will be 3 more pods in the observables namespaces, pods with prefix `kafka-broker0*`, `kafka_broker1*`, `kafka_broker2` correspond to these proxies. They each have a kafka_brokers filter pointing at `kafka-observables-0`, `kafka-observables-1`, and `kafka-observables-2` respectively.
+
+The kafka brokers installed in the next step will have advertised listener set to the addresses for the above sidecars, `kafka-broker0.observables.svc.cluster.local:9092`, `kafka-broker1.observables.svc.cluster.local:9092`, `kafka-broker2.observables.svc.cluster.local:9092`.
+
+Install kafka:
+
+```bash
+kubectl apply -f kafka_brokers/kafka_template.yaml -n observables
 ```
 
 `kubectl get pods -n observables`,
@@ -26,43 +45,27 @@ To explain this setup a little more, there are 3 kafka brokers. Each broker has 
 - name: KAFKA_CFG_LISTENERS
     value: "PLAINTEXT://:$(KAFKA_PORT_NUMBER)"
 - name: KAFKA_CFG_ADVERTISED_LISTENERS
-    value: "PLAINTEXT://$(MY_POD_NAME).kafka-observables-headless.observables.svc.cluster.local:$(KAFKA_PORT_NUMBER)"
+    value: "PLAINTEXT://kafka-broker$ID.observables.svc.cluster.local:$(KAFKA_PORT_NUMBER)"
 ```
 
 `KAFKA_PORT_NUMBER` by default is 9092.  Ultimately, there will be three brokers, one with each of the following listener, advertised listener pair:
 
 ```txt
 listeners=PLAINTEXT://:9092
-advertised.listeners=PLAINTEXT://kafka-observables-0.kafka-observables-headless.observables.svc.cluster.local:9092
+advertised.listeners=PLAINTEXT://kafka-broker0.observables.svc.cluster.local:9092
 ```
 
 ```txt
 listeners=PLAINTEXT://:9092
-advertised.listeners=PLAINTEXT://kafka-observables-1.kafka-observables-headless.observables.svc.cluster.local:9092
+advertised.listeners=PLAINTEXT://kafka-broker1.observables.svc.cluster.local:9092
 ```
 
 ```txt
 listeners=PLAINTEXT://:9092
-advertised.listeners=PLAINTEXT://kafka-observables-2.kafka-observables-headless.observables.svc.cluster.local:9092
+advertised.listeners=PLAINTEXT://kafka-broker2.observables.svc.cluster.local:9092
 ```
 
 The pods for these brokers are `kafka-observables-0`, `kafka-observables-1`. and `kafka-observables-2`.
-
-Now, the files in `kafka_brokers` directory deploy 3 Grey Matter sidecars, one for each broker. Each sidecar will have one listener, with the `kafka_brokers` and `tcp_proxy` filter turned on, and the kafka_brokers filter will be pointing at a broker. You can see these configurations in the `b0-configmap.yaml`, `b1-configmap.yaml`, and `b2-configmap.yaml`.
-
-```bash
-kubectl apply -f kafka_brokers/b0-configmap.yaml
-kubectl apply -f kafka_brokers/b1-configmap.yaml
-kubectl apply -f kafka_brokers/b2-configmap.yaml
-kubectl apply -f kafka_brokers/b0-deployment.yaml
-kubectl apply -f kafka_brokers/b1-deployment.yaml
-kubectl apply -f kafka_brokers/b2-deployment.yaml
-kubectl apply -f kafka_brokers/b0-svc.yaml
-kubectl apply -f kafka_brokers/b1-svc.yaml
-kubectl apply -f kafka_brokers/b2-svc.yaml
-```
-
-When this is done, there will be 3 more pods in the observables namespaces, pods with prefix `kafka-broker0*`, `kafka_broker1*`, `kafka_broker2` correspond to these proxies. They each have a kafka_brokers filter pointing at `kafka-observables-0`, `kafka-observables-1`, and `kafka-observables-2` respectively.
 
 Now we will deploy a fibonacci service into the mesh, with the Grey Matter observables filter turned on with 2 different scenarios for its configuration.
 
