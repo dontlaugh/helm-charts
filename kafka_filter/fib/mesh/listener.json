@@ -16,7 +16,7 @@
             "topic": "fibonacci",
             "eventTopic": "fibonacci-scenario2",
             "logLevel": "debug",
-            "kafkaServerConnection": "localhost:109092,localhost:119092,localhost:129092"
+            "kafkaServerConnection": "localhost:19092,localhost:19192,localhost:19292"
           }
       },
     "secret": {
