@@ -23,10 +23,10 @@ This is a second attempt at `kafka_filter` setup with SPIRE:
 
 What I am seeing:
 
-I am just trying to get the kafka brokers and sidecars to be able to talk to each other (locked down). Steps:
+I am just trying to get the kafka brokers and sidecars to be able to talk to each other (locked down). What i did:
 
-- add tls context to each sidecar's listener filter chain (at `0.0.0.0:19092`, `19192` and `19292` respectively) with sds using spiffe identity for that broker sidecar (`kafka-broker-0`, `kafka-broker-1`, and `kafka-broker-2`) with validation context match_subject_alt_names allowing connections from certs with SAN of the other two brokers.
-- add tls context to each cluster pointing at the other brokers - so for example kafka broker 0 configmap has clusters `broker1` and `broker2`, now each has tls_context with sds using spiffe identity `kafka-broker-0` and allowing connection to cert w SAN `kafka-broker-1` for cluster `broker1` and `kafka-broker-2` for cluster broker2
+- added tls context to each sidecar's listener filter chain (at `0.0.0.0:19092`, `19192` and `19292` respectively) with sds using spiffe identity for that broker sidecar (`kafka-broker-0`, `kafka-broker-1`, and `kafka-broker-2`) with validation context match_subject_alt_names allowing connections from certs with SAN of the other two brokers.
+- added tls context to each cluster pointing at the other brokers - so for example kafka broker 0 configmap has clusters `broker1` and `broker2`, now each has tls_context with sds using spiffe identity `kafka-broker-0` and allowing connection to cert w SAN `kafka-broker-1` for cluster `broker1` and `kafka-broker-2` for cluster broker2
 
 I haven't even incorporated allowing fibonacci access yet, The cluster in each sidecar that points at `127.0.0.1:9092`, the plaintext internal listener for the actual kafka broker has no tls_context, indicating plaintext, however, i am seeing this repeated in the logs:
 
