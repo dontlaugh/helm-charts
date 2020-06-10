@@ -20,15 +20,12 @@
         "X25519:P-256:P-521:P-384"
     ],
     "subject_names": [
-      "spiffe://{{ .Values.global.spire.trust_domain}}/edge"{{- if and (eq .service.serviceName "jwt-security") (.Values.global.data.external.enabled) }},
-      "spiffe://{{ .Values.global.spire.trust_domain}}/data"{{- else if eq .service.serviceName "data-internal"}},
-      "spiffe://{{ .Values.global.spire.trust_domain}}/catalog"{{- else if and (eq .service.serviceName "internal-jwt-security") (.Values.global.data.internal.enabled) }},
-      "spiffe://{{ .Values.global.spire.trust_domain}}/data-internal"{{- end }}
+      "spiffe://{{ .Values.global.spire.trust_domain}}/edge"
     ]
   },
   {{- end }}
   "active_http_filters": [
-    "gm.metrics"{{- if (.service.observablesEnabled) }},
+    "gm.metrics"{{- if (.Values.data.deploy.observables_enabled) }},
     "gm.observables"{{- end }}{{- if .Values.global.spire.enabled }},
     "envoy.rbac"{{- end }}
   ],
@@ -90,7 +87,7 @@
       "prometheus_system_metrics_interval_seconds": 15,
       "metrics_key_function": "depth",
       "metrics_key_depth": "3"
-    }{{-  if (.service.observablesEnabled) }},
+    }{{-  if (.Values.data.deploy.observables_enabled) }},
     "gm_observables": {
       "useKafka": true,
       "topic": "{{ .Values.data.name }}",

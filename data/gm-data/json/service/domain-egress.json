@@ -16,11 +16,11 @@
   ]{{- else if .Values.data.secret.enabled }},
   "ssl_config": {
     "require_client_certs": true,
-    "trust_file": "/etc/proxy/tls/sidecar/ca.crt",
+    "trust_file": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.ca }}",
     "cert_key_pairs": [
       {
-        "certificate_path": "/etc/proxy/tls/sidecar/server.crt",
-        "key_path": "/etc/proxy/tls/sidecar/server.key"
+        "certificate_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.cert }}",
+        "key_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.key }}"
       }
     ]
   },

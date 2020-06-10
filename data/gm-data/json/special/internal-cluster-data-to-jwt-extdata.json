@@ -1,17 +1,17 @@
 {
   "cluster_key": "{{ .Values.data.name }}-to-jwt-cluster",
   "zone_key": "zone-default-zone",
-  "name": "jwt-security",
+  "name": "{{ .Values.data.deploy.jwt_name }}",
   "require_tls": true,
   "secret": {
-    "secret_key": "secret-jwt-security-secret",
+    "secret_key": "secret-{{ .Values.data.deploy.jwt_name }}-secret",
     "secret_name": "spiffe://quickstart.greymatter.io/{{ .Values.data.name }}",
     "secret_validation_name": "spiffe://quickstart.greymatter.io",
     "ecdh_curves": [
       "X25519:P-256:P-521:P-384"
     ],
     "subject_names": [
-      "spiffe://{{ .Values.global.spire.trust_domain}}/jwt-security"
+      "spiffe://{{ .Values.global.spire.trust_domain}}/{{ .Values.data.deploy.jwt_name }}"
     ]
   },
   "circuit_breakers": null,

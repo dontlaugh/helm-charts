@@ -1,12 +1,12 @@
 {
-  "shared_rules_key": "{{ .Values.data.name }}-jwt-shared-rules",
-  "name": "jwt-security",
+  "shared_rules_key": "{{ .Values.data.name }}-{{ .Values.data.deploy.jwt_name }}-shared-rules",
+  "name": "{{ .Values.data.deploy.jwt_name }}",
   "zone_key": "zone-default-zone",
   "default": {
     "light": [
       {
         "constraint_key": "",
-        "cluster_key": "{{ .Values.data.name }}-to-jwt-cluster",
+        "cluster_key": "{{ .Values.data.name }}-to-{{ .Values.data.deploy.jwt_name }}-cluster",
         "metadata": null,
         "properties": null,
         "response_data": {},

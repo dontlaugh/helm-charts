@@ -1,5 +1,5 @@
 {
-  "route_key": "{{ .Values.data.name }}-jwt-route",
+  "route_key": "{{ .Values.data.name }}-{{ .Values.data.deploy.jwt_name }}-route",
   {{- if .Values.global.spire.enabled }}
   "domain_key": "domain-{{ .Values.data.name }}-egress",
   {{- else }}
@@ -10,9 +10,9 @@
   "prefix_rewrite": "/",
   "redirects": null,
   {{- if .Values.global.spire.enabled }}
-  "shared_rules_key": "{{ .Values.data.name }}-jwt-shared-rules",
+  "shared_rules_key": "{{ .Values.data.name }}-{{ .Values.data.deploy.jwt_name }}-shared-rules",
   {{- else }}
-  "shared_rules_key": "edge-jwt-security-shared-rules",
+  "shared_rules_key": "edge-{{ .Values.data.deploy.jwt_name }}-shared-rules",
   {{- end }}
   "rules": null,
   "response_data": {},

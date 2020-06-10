@@ -67,7 +67,9 @@ data:
     waiter_sa: false
     # if deploying in standalone mode, the name of the jwt-security service in the mesh to connect to
     jwt_name: jwt-security
+    jwt_prefix: '/jwt'
     data_port: 8181
+    observables_enabled: false
 
   resources:
     limits:
