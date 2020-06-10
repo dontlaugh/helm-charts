@@ -65,6 +65,9 @@ data:
     standalone: false
     # deploy waiter_sa automatically (true if tiller service account has ability to make roles in cluster)
     waiter_sa: false
+    # if deploying in standalone mode, the name of the jwt-security service in the mesh to connect to
+    jwt_name: jwt-security
+    data_port: 8181
 
   resources:
     limits:
@@ -76,7 +79,7 @@ data:
   envvars:
     uses3:
       type: value
-      value: 'true'
+      value: 'false'
     aws_access_key_id:
       type: secret
       secret: '{{ $.Values.data.secret.secret_name | lower }}'

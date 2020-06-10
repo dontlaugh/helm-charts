@@ -1,0 +1,35 @@
+{
+  "zone_key": "{{ .Values.global.zone}}",
+  "cluster_key": "edge-to-{{ .Values.data.name }}-cluster",
+  "name": "{{ .Values.data.name }}",
+  "instances": [],
+  "circuit_breakers": null,
+  "health_checks": [],
+  {{- if .Values.global.spire.enabled }}
+  "require_tls": true,
+  "secret": {
+    "secret_key": "secret-{{ .Values.data.name }}-secret",
+    "secret_name": "spiffe://{{ .Values.global.spire.trust_domain}}/edge",
+    "secret_validation_name": "spiffe://{{ .Values.global.spire.trust_domain}}",
+    "subject_names": [
+      "spiffe://{{ .Values.global.spire.trust_domain}}/{{ .Values.data.name }}"
+  ],
+    "ecdh_curves": [
+        "X25519:P-256:P-521:P-384"
+    ]
+  },
+  {{- else if .Values.data.secret.enabled }}
+  "require_tls": true,
+  "ssl_config": {
+    "require_client_certs": true,
+    "trust_file": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.ca }}",
+    "cert_key_pairs": [
+      {
+        "certificate_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.cert }}",
+        "key_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.key }}"
+      }
+    ]
+  },
+  {{- end }}
+  "outlier_detection": null
+}

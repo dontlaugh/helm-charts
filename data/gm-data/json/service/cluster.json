@@ -1,0 +1,27 @@
+{
+  "cluster_key": "cluster-{{ .Values.data.name }}",
+  "zone_key": "{{ .Values.global.zone}}",
+  "name": "{{ .Values.data.name }}-service",
+  "instances": [
+    {
+        "host": "0.0.0.0",
+        "port": {{ .Values.data.deploy.data_port | default 10808 }}
+    }
+  ],
+  {{- if and ( .Values.data.secret.enabled ) (not .Values.global.spire.enabled) }}
+  "require_tls": true,
+  "ssl_config": {
+    "require_client_certs": true,
+    "trust_file": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.ca }}",
+    "cert_key_pairs": [
+      {
+        "certificate_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.cert }}",
+        "key_path": "{{ .Values.sidecar.secret.mount_point }}{{.Values.sidecar.secret.secret_keys.key }}"
+      }
+    ]
+  },
+  {{- end }}
+  "circuit_breakers": null,
+  "outlier_detection": null,
+  "health_checks": []
+}

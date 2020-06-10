@@ -1,0 +1,17 @@
+{
+  "listener_key": "listener-{{ .Values.data.name }}-egress",
+  "zone_key": "{{ .Values.global.zone}}",
+  "name": "{{ .Values.data.name }}",
+  "ip": "127.0.0.1",
+  "port": 10909,
+  "protocol": "http_auto",
+  "domain_keys": [
+    "domain-{{ .Values.data.name }}",
+    "domain-{{ .Values.data.name }}-egress"
+  ],
+  "tracing_config": null,
+  "active_http_filters": [{{- if (not .Values.global.spire.enabled) }}"gm.inheaders"{{- end}}],
+  "http_filters": {
+    "gm_inheaders": {}
+  }
+}
