@@ -1,0 +1,38 @@
+{{- if .Values.data.deploy.standalone }}
+{{- $top := . }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-{{ .Values.data.name }}-mesh-config
+  namespace: {{ $.Release.Namespace }}
+data:
+{{- range $path, $bytes := $top.Files.Glob "json/service/**.json" }}
+  {{ base $path }}: |-
+{{ tpl ($top.Files.Get $path) $top | indent 4 }}
+{{- end }}
+...
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edge-{{ .Values.data.name }}-mesh-config
+  namespace: {{ $.Release.Namespace }}
+data:
+{{- range $path, $bytes := $top.Files.Glob "json/edge/**.json" }}
+  {{ base $path }}: |-
+{{ tpl ($top.Files.Get $path) $top | indent 4 }}
+{{- end }}
+...
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: special-mesh-config
+  namespace: {{ $.Release.Namespace }}
+data:
+{{- range $path, $bytes := $top.Files.Glob "json/special/**.json" }}
+  {{ base $path }}: |-
+{{ tpl ($top.Files.Get $path) $top | indent 4 }}
+{{- end }}
+{{- end }}

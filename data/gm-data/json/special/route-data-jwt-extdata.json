@@ -6,14 +6,10 @@
   "domain_key": "domain-{{ .Values.data.name }}",
   {{- end }}
   "zone_key": "{{ .Values.global.zone}}",
-  "path": "{{ .Values.services.data.jwt_prefix }}/",
+  "path": "{{ .Values.data.deploy.jwt_prefix }}/",
   "prefix_rewrite": "/",
   "redirects": null,
-  {{- if .Values.global.spire.enabled }}
   "shared_rules_key": "{{ .Values.data.name }}-{{ .Values.data.deploy.jwt_name }}-shared-rules",
-  {{- else }}
-  "shared_rules_key": "edge-{{ .Values.data.deploy.jwt_name }}-shared-rules",
-  {{- end }}
   "rules": null,
   "response_data": {},
   "cohort_seed": null,

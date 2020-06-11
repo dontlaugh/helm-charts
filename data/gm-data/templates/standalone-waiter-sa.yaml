@@ -8,19 +8,17 @@ metadata:
   namespace: {{ .Release.Namespace }}
 
 ---
-# Grey Matter Waiter Role
-kind: Role
+# Grey Matter Waiter Cluster Role
+kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: waiter-sa-role
-  namespace: {{ .Release.Namespace }}
+  name: waiter-sa-cluster-role
 rules:
   - apiGroups: ['']
     resources: ['endpoints']
     verbs: ['get', 'list', 'watch']
 ---
 # Grey Matter Waiter Cluster Role Binding
-
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
@@ -31,8 +29,23 @@ subjects:
     name: waiter-sa
     namespace: {{ .Release.Namespace }}
 roleRef:
-  kind: Role
-  name: waiter-sa-role
+  kind: ClusterRole
+  name: waiter-sa-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# Grey Matter Waiter Cluster Role Binding for control-api namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: waiter-sa-rolebinding
+  namespace: {{ .Values.data.deploy.control_api.namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: waiter-sa
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  kind: ClusterRole
+  name: waiter-sa-cluster-role
   apiGroup: rbac.authorization.k8s.io
 ---
 {{- end -}}

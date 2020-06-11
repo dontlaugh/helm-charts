@@ -16,7 +16,7 @@ global:
   zone: zone-default-zone
   # Whether or not to use spire for cert management and the trust domain
   spire:
-    enabled: false
+    enabled: true
     trust_domain: quickstart.greymatter.io
     path: '/run/spire/socket/agent.sock'
   # Whether to register services with Consul and where to find the Consul server
@@ -34,9 +34,16 @@ global:
   sidecar:
     version: 1.4.1
 
+  # Global rbac configuration for service admin principal.
+  rbac:
+    admin:
+      header_name: user_dn
+      match_type: exact_match
+      header_value: CN=quickstart,OU=Engineering,O=Decipher Technology Studios,L=Alexandria,ST=Virginia,C=US
+
 data:
   # Name used for the deployment and service resources
-  name: data
+  name: data-solo
   version: latest
   replicas: 1
   # If set, enables tls using the secret specified in secret_name
@@ -62,14 +69,20 @@ data:
 
   # If Grey Matter Data is being deployed as a standalone instance, these values need to be provided
   deploy:
-    standalone: false
+    standalone: true
     # deploy waiter_sa automatically (true if tiller service account has ability to make roles in cluster)
-    waiter_sa: false
+    waiter_sa: true
     # if deploying in standalone mode, the name of the jwt-security service in the mesh to connect to
     jwt_name: jwt-security
     jwt_prefix: '/jwt'
     data_port: 8181
     observables_enabled: false
+    control_api:
+      apply: true
+      namespace: default
+      name: control-api
+      port: 5555
+      secret: enabled
 
   resources:
     limits:
@@ -268,6 +281,50 @@ mongo:
     #  ca: ca_b64
     #  cert: cert_b64
     #  key: key_b64
+
+bootstrap:
+  image: 'docker-dev.production.deciphernow.com/deciphernow/greymatter:1.4.1'
+  image_pull_policy: IfNotPresent
+  secret:
+    enabled: true
+    secret_name: sidecar-certs
+    mount_point: /certs
+    insecure: true
+    secret_keys:
+      cert: server.crt
+      key: server.key
+      ca: ca.crt
+  envvars:
+    greymatter_console_level:
+      value: 'debug'
+      type: 'value'
+    greymatter_api_host:
+      value: '{{ .Values.data.deploy.control_api.name }}:{{ .Values.data.deploy.control_api.port }}'
+      type: 'value'
+    greymatter_api_key:
+      value: 'xxx'
+      type: 'value'
+    greymatter_api_ssl:
+      value: 'false'
+      type: 'value'
+    basic_object_path:
+      value: '/tmp/mesh/basic_objects'
+      type: 'value'
+    spire_enabled:
+      type: 'value'
+      value: '{{ .Values.global.spire.enabled }}'
+    greymatter_api_ssl:
+      type: value
+      value: '{{ .Values.bootstrap.secret.enabled }}'
+    greymatter_api_insecure:
+      type: value
+      value: '{{ .Values.bootstrap.secret.insecure }}'
+    greymatter_api_sslcert:
+      type: value
+      value: '{{ .Values.bootstrap.secret.mount_point }}/{{ .Values.bootstrap.secret.secret_keys.cert }}'
+    greymatter_api_sslkey:
+      type: value
+      value: '{{ .Values.bootstrap.secret.mount_point }}/{{ .Values.bootstrap.secret.secret_keys.key }}'
 
 sidecar:
   version: '{{ .Values.global.sidecar.version | default "latest" }}'
