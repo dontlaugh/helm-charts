@@ -1,8 +1,10 @@
+{{- if and .Values.data.deploy.standalone }}
 kind: ConfigMap
 apiVersion: v1
 metadata:
-  name: bootstrap-script
+  name: bootstrap-script-data-standalone
   namespace: {{ .Release.Namespace }}
 data:
   bootstrap.sh: |-
 {{ .Files.Get "config/bootstrap.sh" | indent 4 }}
+{{- end }}

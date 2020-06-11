@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-MESH_CONFIG_DIR="/etc/config/mesh/"
+MESH_CONFIG_DIR="/etc/config/mesh"
 
 echo "Configuring mesh from config directory: $MESH_CONFIG_DIR"
 
@@ -40,7 +40,7 @@ create_or_update() {
     echo "----------"
 }
 
-cd $MESH_CONFIG_DIR/services
+cd $MESH_CONFIG_DIR/service
 # Each service should be able to be created all by itself. This means it needs to contain a domain
 for d in */; do
     echo "Found service: $d"
@@ -63,21 +63,8 @@ for d in */; do
         sleep $delay
     done
 
-    cd $MESH_CONFIG_DIR/services
+    cd $MESH_CONFIG_DIR/service
 done
-
-# The edge service is created last as it links to the clusters of every other service.
-# The edge domain must be created before it can be referenced
-cd $MESH_CONFIG_DIR/special
-echo "Creating special configuration objects (domain, edge listener + proxy)"
-create_or_update "domain"
-create_or_update "domain" domain-egress.json
-create_or_update "listener"
-create_or_update "listener" listener-egress.json
-create_or_update "proxy"
-create_or_update "cluster"
-create_or_update "shared_rules"
-create_or_update "route"
 
 cd $MESH_CONFIG_DIR/edge
 echo "Creating edge configuration objects"

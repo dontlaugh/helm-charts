@@ -33,7 +33,7 @@ global:
       name: waiter-sa
   sidecar:
     version: 1.4.1
-
+ 
   # Global rbac configuration for service admin principal.
   rbac:
     admin:
@@ -43,7 +43,7 @@ global:
 
 data:
   # Name used for the deployment and service resources
-  name: data-solo
+  name: data
   version: latest
   replicas: 1
   # If set, enables tls using the secret specified in secret_name
@@ -69,10 +69,11 @@ data:
 
   # If Grey Matter Data is being deployed as a standalone instance, these values need to be provided
   deploy:
-    standalone: true
+    standalone: false
     # deploy waiter_sa automatically (true if tiller service account has ability to make roles in cluster)
-    waiter_sa: true
-    # if deploying in standalone mode, the name of the jwt-security service in the mesh to connect to
+    waiter_sa: false
+
+    # if deploying in standalone mode, specify the following for mesh configs:
     jwt_name: jwt-security
     jwt_prefix: '/jwt'
     data_port: 8181
@@ -141,7 +142,7 @@ data:
       key: database
     gmdata_use_tls:
       type: value
-      value: 'true'
+      value: '{{ not .Values.global.spire.enabled }}'
     gmdata_cert:
       type: secret
       secret: jwt-certs
@@ -172,7 +173,7 @@ data:
       value: '/jwt'
     client_jwt_endpoint_use_tls:
       type: value
-      value: 'true'
+      value: '{{ not .Values.global.spire.enabled }}'
     client_jwt_endpoint_cert:
       type: secret
       secret: jwt-certs
@@ -299,7 +300,7 @@ bootstrap:
       value: 'debug'
       type: 'value'
     greymatter_api_host:
-      value: '{{ .Values.data.deploy.control_api.name }}:{{ .Values.data.deploy.control_api.port }}'
+      value: '{{ .Values.data.deploy.control_api.name }}.{{ .Values.data.deploy.control_api.namespace }}.svc.cluster.local:{{ .Values.data.deploy.control_api.port }}'
       type: 'value'
     greymatter_api_key:
       value: 'xxx'
@@ -315,7 +316,7 @@ bootstrap:
       value: '{{ .Values.global.spire.enabled }}'
     greymatter_api_ssl:
       type: value
-      value: '{{ .Values.bootstrap.secret.enabled }}'
+      value: '{{- if .Values.global.spire.enabled }}false{{- else }}{{ .Values.bootstrap.secret.enabled }}{{- end }}'
     greymatter_api_insecure:
       type: value
       value: '{{ .Values.bootstrap.secret.insecure }}'
@@ -350,3 +351,25 @@ sidecar:
     requests:
       cpu: 100m
       memory: 128Mi
+  envvars:
+    xds_cluster:
+      type: value
+      value: '{{ .Values.data.name }}'
+    proxy_dynamic:
+      type: 'value'
+      value: 'true'
+    xds_zone:
+      type: 'value'
+      value: '{{ .Values.global.zone }}'
+    xds_host:
+      type: 'value'
+      value: 'control.{{ .Values.data.deploy.control_api.namespace }}.svc'
+    xds_port:
+      type: 'value'
+      value: '{{ .Values.global.control.port }}'
+    xds_node_id:
+      type: 'value'
+      value: '{{ .Release.Namespace }}'
+    envoy_admin_log_path:
+      type: 'value'
+      value: '/dev/stdout'

@@ -1,5 +1,5 @@
 {
-  "cluster_key": "{{ .Values.data.name }}-to-jwt-cluster",
+  "cluster_key": "{{ .Values.data.name }}-to-{{ .Values.data.deploy.jwt_name }}-cluster",
   "zone_key": "zone-default-zone",
   "name": "{{ .Values.data.deploy.jwt_name }}",
   "require_tls": true,

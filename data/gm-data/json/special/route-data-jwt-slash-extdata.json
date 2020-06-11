@@ -9,7 +9,7 @@
   "path": "{{ .Values.data.deploy.jwt_prefix }}",
   "prefix_rewrite": "{{ .Values.data.deploy.jwt_prefix }}/",
   "redirects": null,
-  "shared_rules_key": "{{ .Values.data.name }}-jwt-shared-rules",
+  "shared_rules_key": "{{ .Values.data.name }}-{{ .Values.data.deploy.jwt_name }}-shared-rules",
   "rules": null,
   "response_data": {},
   "cohort_seed": null,

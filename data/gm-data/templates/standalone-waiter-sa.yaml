@@ -22,7 +22,7 @@ rules:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: waiter-sa-rolebinding
+  name: waiter-sa-rolebinding-data-{{ .Release.Namespace }}
   namespace: {{ .Release.Namespace }}
 subjects:
   - kind: ServiceAccount
@@ -37,7 +37,7 @@ roleRef:
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: waiter-sa-rolebinding
+  name: waiter-sa-rolebinding-data-{{ .Values.data.deploy.control_api.namespace }}
   namespace: {{ .Values.data.deploy.control_api.namespace }}
 subjects:
   - kind: ServiceAccount

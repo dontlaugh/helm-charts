@@ -28,7 +28,7 @@ data:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: special-mesh-config
+  name: special-mesh-config-{{ .Values.data.name }}
   namespace: {{ $.Release.Namespace }}
 data:
 {{- range $path, $bytes := $top.Files.Glob "json/special/**.json" }}

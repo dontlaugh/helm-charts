@@ -38,7 +38,7 @@ spec:
               mountPath: {{ .Values.bootstrap.secret.mount_point }}
             {{- end }}
             - name: service-config-volume-{{ .Values.data.name }}
-              mountPath: /etc/config/mesh/services/{{ .Values.data.name }}
+              mountPath: /etc/config/mesh/service/{{ .Values.data.name }}
             - name: edge-config-volume-{{ .Values.data.name }}
               mountPath: /etc/config/mesh/edge/{{ .Values.data.name }}
             - name: special-config-volume
@@ -63,11 +63,11 @@ spec:
             name: edge-{{ .Values.data.name }}-mesh-config
         - name: bootstrap-script-volume
           configMap:
-            name: bootstrap-script
+            name: bootstrap-script-data-standalone
             defaultMode: 0777
         - name: special-config-volume
           configMap:
-            name: special-mesh-config
+            name: special-mesh-config-{{ .Values.data.name }}
       imagePullSecrets:
         - name: {{ .Values.global.image_pull_secret }}
 
